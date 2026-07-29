@@ -1,0 +1,7 @@
+# Generated vector index — regenerable from knowledge_base/documents/, not source
+knowledge_base/vector_store/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
