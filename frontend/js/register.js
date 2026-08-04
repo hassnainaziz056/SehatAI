@@ -150,7 +150,7 @@ form.addEventListener("submit", async (event) => {
 
         if (response.status === 201) {
             showStatus(
-                "Account created! You can now log in on the chat page.",
+                "Account created! You can now log in.",
                 "success"
             );
             form.reset();

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SehatAI — Chat</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body class="chat-body">
+
+    <main class="chat-card" role="main">
+        <header class="chat-header">
+            <div class="wordmark">
+                <span class="pulse-dot" aria-hidden="true"></span>
+                <span class="wordmark-text">SehatAI</span>
+            </div>
+            <button type="button" id="logout-btn" class="logout-btn">Log out</button>
+        </header>
+
+        <div id="chat-log" class="chat-log" aria-live="polite">
+            <p class="chat-loading">Loading your conversation…</p>
+        </div>
+
+        <form id="composer" class="composer" novalidate>
+            <label for="message-input" class="sr-only">Message</label>
+            <textarea id="message-input" class="message-input" placeholder="Tell SehatAI how you're feeling…" rows="1"
+                required></textarea>
+            <button type="submit" id="send-btn" class="send-btn" aria-label="Send message">Send</button>
+        </form>
+    </main>
+
+    <script src="js/chat.js"></script>
+</body>
+
+</html>
