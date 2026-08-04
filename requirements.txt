@@ -4,7 +4,11 @@ accelerate
 huggingface_hub
 sentence-transformers
 chromadb
+
+# Phase 14 — Database Layer
 sqlalchemy
+
+# Phase 15 — Authentication
 passlib[bcrypt]
 # passlib 1.7.4's bcrypt backend breaks on bcrypt>=4.1 (removed __about__,
 # and >=4.1 raises instead of truncating on secrets over 72 bytes, which
@@ -12,3 +16,10 @@ passlib[bcrypt]
 # `pip install -r requirements.txt` doesn't hand you a broken hasher.
 bcrypt==4.0.1
 python-jose[cryptography]
+
+# Phase 16 — FastAPI Wiring
+fastapi
+uvicorn[standard]
+email-validator
+# ^ required by pydantic's EmailStr type, used in backend/schemas.py to
+# validate email addresses on /register and /login request bodies.
