@@ -155,14 +155,18 @@ PROMPT_LIBRARY = [
 # 2. Helpers
 # ---------------------------------------------------------------------------
 
-def reset_history(bot: HealthcareChatbot) -> None:
-    """Reset conversation_history back to just the system message.
+def fresh_history(bot: HealthcareChatbot) -> list:
+    """Build a brand-new, single-message conversation history (system prompt
+    only) for a fresh entry.
 
-    This keeps every prompt independent so earlier prompts in the run don't
-    bias later responses (each entry gets a fresh, single-turn conversation).
+    Phase 13 update: HealthcareChatbot no longer keeps conversation_history
+    on itself, so this used to reset bot.conversation_history — now it just
+    hands back a new local list, which the caller passes into
+    generate_response() explicitly. Keeps every prompt independent so
+    earlier prompts in the run don't bias later responses (each entry gets
+    a fresh, single-turn conversation).
     """
-    system_message = bot.conversation_history[0]
-    bot.conversation_history = [system_message]
+    return [{"role": "system", "content": bot.system_prompt}]
 
 
 def build_transcript(results: list[dict]) -> str:
@@ -224,11 +228,12 @@ def main() -> None:
         print(f"[{i}/{total}] Running: {topic} ({quality})")
 
         # Fresh single-turn conversation for every prompt.
-        reset_history(bot)
+        history = fresh_history(bot)
 
         result_entry = {"topic": topic, "quality": quality, "prompt": prompt_text}
         try:
-            response_text = bot.generate_response(prompt_text)
+            # Phase 13 signature: takes history in, returns (text, updated_history).
+            response_text, history = bot.generate_response(prompt_text, history)
             result_entry["response"] = response_text
         except Exception as e:
             # One bad prompt shouldn't kill the whole run — log it and move on.

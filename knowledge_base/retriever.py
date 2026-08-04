@@ -21,6 +21,14 @@ from sentence_transformers import SentenceTransformer
 EMBEDDING_MODEL_NAME = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 COLLECTION_NAME = "sehatai_docs"
 
+# Chunks with a raw distance above this are treated as "not actually
+# relevant" and dropped, so an off-topic or badly-matched query doesn't get
+# handed irrelevant reference text. This is a rough starting estimate based
+# on early manual testing (good matches clustered around 12-20, weak/wrong
+# matches around 25+) — recalibrate this once evaluation/scoring_template.md
+# has real average distances for clean vs. typo/offtopic queries filled in.
+MAX_DISTANCE = 25.0
+
 BASE_DIR = os.path.dirname(__file__)
 VECTOR_STORE_DIR = os.path.join(BASE_DIR, "vector_store")
 
@@ -62,8 +70,10 @@ class Retriever:
         """
         Return up to top_k chunks relevant to `query`, each as
         {"topic": ..., "text": ...}. Returns an empty list if retrieval is
-        unavailable or the query fails for any reason — callers should
-        treat that as "no reference material available" and carry on.
+        unavailable, if the query fails for any reason, or if the best
+        matches aren't actually close enough to trust (see MAX_DISTANCE) —
+        callers should treat an empty list as "no reference material
+        available" and carry on.
         """
         if not self.available:
             return []
@@ -77,11 +87,40 @@ class Retriever:
 
             documents = results["documents"][0]
             metadatas = results["metadatas"][0]
+            distances = results["distances"][0]
 
             return [
                 {"topic": metadata["topic"], "text": document_text}
-                for document_text, metadata in zip(documents, metadatas)
+                for document_text, metadata, distance in zip(documents, metadatas, distances)
+                if distance <= MAX_DISTANCE
             ]
         except Exception as e:
             print(f"[WARN] Retrieval failed ({e}). Continuing without reference material.")
+            return []
+
+    def debug_top_k(self, query: str, top_k: int = 3) -> list[dict]:
+        """
+        TEMPORARY diagnostic method — returns raw top_k matches WITHOUT the
+        MAX_DISTANCE filter, including the actual distance number for each.
+        Used to see real retrieval behavior when debugging a mismatch,
+        instead of guessing. Not used by chatbot.py's normal answer path —
+        only called from debug print statements. Safe to remove once the
+        current follow-up retrieval issue is diagnosed.
+        """
+        if not self.available:
+            return []
+        try:
+            query_embedding = self.embedder.encode([query]).tolist()
+            results = self.collection.query(
+                query_embeddings=query_embedding,
+                n_results=top_k,
+            )
+            metadatas = results["metadatas"][0]
+            distances = results["distances"][0]
+            return [
+                {"topic": metadata["topic"], "distance": distance}
+                for metadata, distance in zip(metadatas, distances)
+            ]
+        except Exception as e:
+            print(f"[WARN] debug_top_k failed: {e}")
             return []
