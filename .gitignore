@@ -1,6 +1,9 @@
 # Generated vector index — regenerable from knowledge_base/documents/, not source
 knowledge_base/vector_store/
 
+# Generated local database — regenerable via backend/db/init_db.py, not source
+backend/db/sehatai.db
+
 # Python
 __pycache__/
 *.pyc
