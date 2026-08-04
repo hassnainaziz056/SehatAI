@@ -23,6 +23,13 @@ class RegisterRequest(BaseModel):
     name: str = Field(min_length=1)
     email: EmailStr
     password: str = Field(min_length=8)
+    # Phase 17: selected conditions from the registration checklist
+    # (plus whatever free-text "Other" value the patient typed, appended
+    # by the frontend as an extra string in this same list). Optional and
+    # defaults to empty so existing callers (e.g. test_auth.py's direct
+    # register_user() calls, which don't go through this schema at all)
+    # and any client that doesn't send this field keep working unchanged.
+    conditions: list[str] = Field(default_factory=list)
 
 
 class RegisterResponse(BaseModel):

@@ -1,0 +1,349 @@
+/* ==========================================================================
+   backend's sibling — frontend/css/style.css — Phase 17: Registration UI
+
+   Design direction: a rural clinic at dusk, not a hospital or a tech
+   dashboard. Deep slate-navy (not pure black) reads as calm/evening
+   rather than "dark mode as default"; the warm amber accent is a lamp,
+   not a brand color; the sage green marks something as selected/healthy,
+   distinct from the amber "action" color so the two never compete.
+
+   Shared with frontend's Phase 18 chat page later — keep this file's
+   tokens (the CSS custom properties below) as the single source of
+   truth for both pages' color/type system.
+   ========================================================================== */
+
+:root {
+    /* Color */
+    --color-bg: #121820;
+    --color-surface: #1b2430;
+    --color-surface-raised: #212c3a;
+    --color-border: #2a3441;
+    --color-text: #e8ecf1;
+    --color-text-muted: #8b98a8;
+    --color-accent: #e8a24a;
+    /* lamplight amber — actions */
+    --color-accent-hover: #f3b566;
+    --color-vital: #5fb88f;
+    /* sage green — selected / healthy state */
+    --color-danger: #d97a6c;
+
+    /* Type */
+    --font-display: 'Fraunces', Georgia, serif;
+    --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+
+    /* Layout */
+    --radius: 10px;
+    --card-width: 560px;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 48px 20px 80px;
+    background: var(--color-bg);
+    background-image: radial-gradient(circle at 50% -10%, rgba(232, 162, 74, 0.07), transparent 45%);
+    color: var(--color-text);
+    font-family: var(--font-body);
+    line-height: 1.5;
+}
+
+.card {
+    width: 100%;
+    max-width: var(--card-width);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 40px 36px 36px;
+}
+
+/* ---- Header ---- */
+
+.card-header {
+    margin-bottom: 28px;
+}
+
+.wordmark {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.wordmark-text {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 1.6rem;
+    letter-spacing: 0.01em;
+}
+
+.tagline {
+    margin: 10px 0 0;
+    color: var(--color-text-muted);
+    font-size: 0.95rem;
+    max-width: 44ch;
+}
+
+.pulse-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--color-vital);
+    box-shadow: 0 0 0 3px rgba(95, 184, 143, 0.18);
+    flex-shrink: 0;
+}
+
+.ecg-divider {
+    width: 100%;
+    height: 20px;
+    margin-top: 22px;
+    color: var(--color-border);
+}
+
+/* ---- Form ---- */
+
+form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+label {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--color-text);
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"] {
+    background: var(--color-surface-raised);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 11px 13px;
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-size: 0.96rem;
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus {
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px rgba(232, 162, 74, 0.16);
+}
+
+input:invalid:not(:placeholder-shown) {
+    border-color: var(--color-danger);
+}
+
+.field-hint {
+    font-size: 0.82rem;
+    color: var(--color-text-muted);
+}
+
+/* ---- Conditions checklist ("chart tags") ---- */
+
+.conditions-fieldset {
+    border: none;
+    padding: 0;
+    margin: 4px 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+legend {
+    font-family: var(--font-display);
+    font-size: 1.05rem;
+    font-weight: 500;
+    padding: 0;
+    margin-bottom: 4px;
+}
+
+.conditions-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.conditions-loading,
+.conditions-error {
+    color: var(--color-text-muted);
+    font-size: 0.88rem;
+}
+
+.conditions-error {
+    color: var(--color-danger);
+}
+
+.chart-tag {
+    position: relative;
+}
+
+.chart-tag input.condition-checkbox {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.chart-tag label {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 14px 8px 10px;
+    background: var(--color-surface-raised);
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    font-size: 0.87rem;
+    font-weight: 400;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    user-select: none;
+    transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.chart-tag label .pulse-dot {
+    background: var(--color-border);
+    box-shadow: none;
+    transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.chart-tag input.condition-checkbox:checked+label {
+    border-color: var(--color-vital);
+    color: var(--color-text);
+    background: rgba(95, 184, 143, 0.1);
+}
+
+.chart-tag input.condition-checkbox:checked+label .pulse-dot {
+    background: var(--color-vital);
+    box-shadow: 0 0 0 3px rgba(95, 184, 143, 0.18);
+}
+
+.chart-tag input.condition-checkbox:focus-visible+label {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+}
+
+.chart-tag--other {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.other-input {
+    flex: 1;
+    min-width: 140px;
+    background: var(--color-surface-raised);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 8px 11px;
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-size: 0.87rem;
+    outline: none;
+    transition: border-color 0.15s ease, opacity 0.15s ease;
+}
+
+.other-input:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.other-input:focus {
+    border-color: var(--color-accent);
+}
+
+/* ---- Submit ---- */
+
+.submit-btn {
+    margin-top: 6px;
+    padding: 13px 20px;
+    background: var(--color-accent);
+    color: #1a1300;
+    border: none;
+    border-radius: 8px;
+    font-family: var(--font-body);
+    font-size: 0.98rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.05s ease;
+}
+
+.submit-btn:hover {
+    background: var(--color-accent-hover);
+}
+
+.submit-btn:active {
+    transform: scale(0.99);
+}
+
+.submit-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* ---- Status messages ---- */
+
+.form-status {
+    padding: 11px 14px;
+    border-radius: 8px;
+    font-size: 0.88rem;
+    border: 1px solid transparent;
+}
+
+.form-status--error {
+    background: rgba(217, 122, 108, 0.12);
+    border-color: rgba(217, 122, 108, 0.4);
+    color: #f0b2a7;
+}
+
+.form-status--success {
+    background: rgba(95, 184, 143, 0.12);
+    border-color: rgba(95, 184, 143, 0.4);
+    color: #a9dcc4;
+}
+
+.footer-note {
+    margin: 24px 0 0;
+    text-align: center;
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+}
+
+/* ---- Accessibility / motion ---- */
+
+@media (prefers-reduced-motion: reduce) {
+    * {
+        transition: none !important;
+    }
+}
+
+/* ---- Mobile ---- */
+
+@media (max-width: 480px) {
+    .card {
+        padding: 28px 20px 24px;
+    }
+
+    .wordmark-text {
+        font-size: 1.4rem;
+    }
+}

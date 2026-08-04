@@ -21,6 +21,7 @@ from backend.auth.security import (
     create_access_token,
     register_user,
 )
+from backend.db.models import UserCondition
 from backend.deps import get_db
 from backend.schemas import LoginRequest, LoginResponse, RegisterRequest, RegisterResponse
 
@@ -35,6 +36,19 @@ def register(request: RegisterRequest, db: Session = Depends(get_db)):
         # 409 Conflict — the request is well-formed, but the resource
         # (this email) already exists, which is exactly what 409 means.
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered")
+
+    # Phase 17: save whatever conditions the patient selected on the
+    # registration checklist (plus any free-text "Other" value, already
+    # folded into this same list by the frontend). Blank/whitespace-only
+    # entries are skipped so an empty "Other" text box that got submitted
+    # anyway doesn't create a junk UserCondition row.
+    for condition_name in request.conditions:
+        cleaned_name = condition_name.strip()
+        if cleaned_name:
+            db.add(UserCondition(user_id=user.id, condition_name=cleaned_name))
+    if request.conditions:
+        db.commit()
+
     return user
 
 
