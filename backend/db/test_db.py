@@ -44,7 +44,16 @@ def main() -> None:
         # 1. Create a test user.
         # ------------------------------------------------------------
         print("\n[1] Creating test user...")
-        user = User(name="Test Patient", email=test_email)
+        user = User(
+            name="Test Patient",
+            email=test_email,
+            # Phase 15 added password_hash as a required column. A
+            # deliberately obvious placeholder here — this script tests
+            # the storage layer (Phase 14), not hashing itself (that's
+            # backend/auth/test_auth.py's job), so a real hash isn't
+            # needed, just a non-empty value to satisfy nullable=False.
+            password_hash="not-a-real-hash-see-backend-auth-test_auth-py",
+        )
         session.add(user)
         session.commit()
         session.refresh(user)  # populate user.id, user.created_at from the DB

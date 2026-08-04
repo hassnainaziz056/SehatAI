@@ -5,3 +5,10 @@ huggingface_hub
 sentence-transformers
 chromadb
 sqlalchemy
+passlib[bcrypt]
+# passlib 1.7.4's bcrypt backend breaks on bcrypt>=4.1 (removed __about__,
+# and >=4.1 raises instead of truncating on secrets over 72 bytes, which
+# passlib's own internal self-test hits during backend setup). Pinned so
+# `pip install -r requirements.txt` doesn't hand you a broken hasher.
+bcrypt==4.0.1
+python-jose[cryptography]

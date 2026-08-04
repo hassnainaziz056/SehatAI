@@ -1,8 +1,10 @@
 """
-backend/db/models.py — Phase 14: Database Layer
+backend/db/models.py — Phase 14: Database Layer (+ Phase 15: password_hash)
 
 Defines the three tables the future multi-user web platform is built on:
-  User            — one row per registered patient.
+  User            — one row per registered patient. Phase 15 added
+                    password_hash (bcrypt hash, never a raw password —
+                    see backend/auth/security.py).
   UserCondition   — one row per health condition a patient selected at
                     registration (e.g. "diabetes", "hypertension"). A
                     separate table rather than a single comma-separated
@@ -56,9 +58,9 @@ class Base(DeclarativeBase):
 class User(Base):
     """One row per registered patient/account.
 
-    Deliberately minimal for Phase 14 — no password_hash yet, since
-    authentication (Phase 15) isn't built yet. name/email are enough to
-    prove the storage layer itself works end-to-end.
+    Phase 15 adds password_hash — a bcrypt hash, never the raw password
+    (see backend/auth/security.py for hashing/verification). Nothing else
+    about this model changes from Phase 14.
     """
 
     __tablename__ = "users"
@@ -66,6 +68,7 @@ class User(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String, nullable=False)
     email: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    password_hash: Mapped[str] = mapped_column(String, nullable=False)
     created_at: Mapped[datetime] = mapped_column(default=_utcnow)
 
     # user.conditions -> list[UserCondition], user.messages -> list[ChatMessage].
