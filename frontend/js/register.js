@@ -117,6 +117,48 @@ function collectSelectedConditions() {
     return selected;
 }
 
+/** Phase 20: reads the optional health-profile fields. Every field that
+ * was left blank is sent as null rather than "" or NaN, so the backend
+ * (Pydantic's `int | None` / `float | None` fields) doesn't have to
+ * special-case an empty string — an untouched number input, a select
+ * still on its default option, and a truly-not-answered field should
+ * all mean the same thing: "not provided". */
+function collectProfileFields() {
+    const numOrNull = (id) => {
+        const raw = document.getElementById(id).value.trim();
+        return raw === "" ? null : Number(raw);
+    };
+    const strOrNull = (id) => {
+        const raw = document.getElementById(id).value.trim();
+        return raw === "" ? null : raw;
+    };
+
+    return {
+        age: numOrNull("profile-age"),
+        gender: strOrNull("profile-gender"),
+        blood_group: strOrNull("profile-blood-group"),
+        height_cm: numOrNull("profile-height"),
+        weight_kg: numOrNull("profile-weight"),
+        pregnancy_status: strOrNull("profile-pregnancy"),
+        smoking_status: strOrNull("profile-smoking"),
+        emergency_contact_name: strOrNull("profile-emergency-name"),
+        emergency_contact_phone: strOrNull("profile-emergency-phone"),
+        allergies: strOrNull("profile-allergies"),
+        medications: strOrNull("profile-medications"),
+        surgeries: strOrNull("profile-surgeries"),
+        medical_history: strOrNull("profile-history"),
+    };
+}
+
+/** True if every profile field is null — i.e. the patient skipped the
+ * whole optional section. Sent as `profile: null` in that case (not an
+ * object of all-nulls) so the backend doesn't create an empty
+ * PatientProfile row for someone who deliberately left it blank; see
+ * auth_routes.py's `if request.profile is not None` check. */
+function isProfileEmpty(profile) {
+    return Object.values(profile).every((value) => value === null);
+}
+
 form.addEventListener("submit", async (event) => {
     event.preventDefault();
     hideStatus();
@@ -131,11 +173,14 @@ form.addEventListener("submit", async (event) => {
         return;
     }
 
+    const profileFields = collectProfileFields();
+
     const payload = {
         name,
         email,
         password,
         conditions: collectSelectedConditions(),
+        profile: isProfileEmpty(profileFields) ? null : profileFields,
     };
 
     submitBtn.disabled = true;

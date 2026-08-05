@@ -73,6 +73,59 @@ function appendMessage(role, content) {
     chatLog.scrollTop = chatLog.scrollHeight;
 }
 
+// Roughly how fast characters appear — small enough to feel snappy on a
+// long reply, still visibly "typed" rather than an instant flash. Punctuation
+// gets a slightly longer pause so it reads with natural rhythm instead of a
+// flat, mechanical scroll — the same idea as how a person actually types.
+const TYPEWRITER_MS_PER_CHAR = 14;
+const TYPEWRITER_PAUSE_CHARS = new Set([".", "!", "?", ","]);
+const TYPEWRITER_PAUSE_MS = 120;
+
+/**
+ * Same as appendMessage, but for a freshly-arrived assistant reply only —
+ * reveals the text one character at a time instead of all at once, so a
+ * live response feels like it's being written in the moment rather than
+ * pasted in. Deliberately NOT used for loadHistory(): replaying an entire
+ * past conversation character-by-character on every page load would be
+ * slow and would misleadingly suggest old replies are being generated
+ * again right now, so history still renders instantly via appendMessage.
+ *
+ * Returns a Promise that resolves once typing finishes, so callers that
+ * need to know when it's done (none currently do, but keeps this composable)
+ * can await it.
+ */
+function appendMessageTyped(role, content) {
+    const bubble = document.createElement("div");
+    bubble.className = `bubble bubble--${role === "assistant" ? "assistant" : "patient"}`;
+
+    const text = document.createElement("p");
+    text.className = "bubble-text";
+    bubble.appendChild(text);
+    chatLog.appendChild(bubble);
+    chatLog.scrollTop = chatLog.scrollHeight;
+
+    return new Promise((resolve) => {
+        let i = 0;
+        function typeNextChar() {
+            if (i >= content.length) {
+                resolve();
+                return;
+            }
+            const ch = content[i];
+            text.textContent += ch;
+            i += 1;
+            // Keep the log scrolled to the bottom as text grows, same as
+            // a real chat app — otherwise a long reply types "off screen".
+            chatLog.scrollTop = chatLog.scrollHeight;
+            const delay = TYPEWRITER_PAUSE_CHARS.has(ch)
+                ? TYPEWRITER_PAUSE_MS
+                : TYPEWRITER_MS_PER_CHAR;
+            setTimeout(typeNextChar, delay);
+        }
+        typeNextChar();
+    });
+}
+
 /** Load and render prior conversation on page load. */
 async function loadHistory() {
     try {
@@ -149,16 +202,16 @@ composer.addEventListener("submit", async (event) => {
 
         if (response.ok) {
             const data = await response.json();
-            appendMessage("assistant", data.reply);
+            await appendMessageTyped("assistant", data.reply);
         } else if (response.status === 422) {
-            appendMessage("assistant", "That message couldn't be sent — please try rephrasing it.");
+            await appendMessageTyped("assistant", "That message couldn't be sent — please try rephrasing it.");
         } else {
-            appendMessage("assistant", "Something went wrong on our end. Please try again.");
+            await appendMessageTyped("assistant", "Something went wrong on our end. Please try again.");
         }
     } catch (err) {
         thinking.remove();
         if (err.message === "Session expired") return; // already redirecting
-        appendMessage(
+        await appendMessageTyped(
             "assistant",
             "Couldn't reach the server. Please check your connection and try again."
         );

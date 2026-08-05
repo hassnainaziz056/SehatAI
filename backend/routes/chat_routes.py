@@ -18,9 +18,9 @@ here via request.app.state.bot — see main.py's lifespan function for why.
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 
-from backend.db.models import ChatMessage, User
+from backend.db.models import ChatMessage, PatientProfile, User, UserCondition
 from backend.deps import get_current_user, get_db
-from backend.schemas import ChatHistoryEntry, ChatRequest, ChatResponse
+from backend.schemas import ChatHistoryEntry, ChatRequest, ChatResponse, ChatSource
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -34,6 +34,30 @@ def send_message(
 ):
     bot = request.app.state.bot
 
+    # Informal step toward Phase 21 (structured memory), using data that
+    # already exists from Phase 17 registration rather than waiting for
+    # the full profile/memory phases: give the model the patient's name
+    # and the condition(s) they registered with, so it can address them
+    # by name and factor in known conditions without yet building full
+    # symptom/medication fact-tracking. Queried fresh every request (not
+    # cached on the user object) so an edited condition list is picked up
+    # immediately, not just at login.
+    condition_rows = (
+        db.query(UserCondition.condition_name)
+        .filter(UserCondition.user_id == current_user.id)
+        .all()
+    )
+    condition_names = [row[0] for row in condition_rows]
+
+    patient_context = f"\n\nThe patient you're speaking with is named {current_user.name}."
+    if condition_names:
+        patient_context += (
+            " They have the following condition(s) on file: "
+            + ", ".join(condition_names)
+            + ". Keep this in mind where it's relevant, but don't force it into every reply."
+        )
+    system_message = bot.system_prompt + patient_context
+
     # Reconstruct conversation_history in the exact shape generate_response()
     # expects: [{"role": "system", ...}, {"role": "user"/"assistant", ...}, ...].
     # This mirrors main.py's own history initialization (system prompt
@@ -45,7 +69,7 @@ def send_message(
         .order_by(ChatMessage.created_at)
         .all()
     )
-    history = [{"role": "system", "content": bot.system_prompt}] + [
+    history = [{"role": "system", "content": system_message}] + [
         {"role": msg.role, "content": msg.content} for msg in past_messages
     ]
 
@@ -55,7 +79,37 @@ def send_message(
     # turns to the database directly rather than keeping any history in
     # memory between requests. The next request rebuilds history fresh
     # from the DB the same way, from scratch, above.
-    reply_text, _updated_history = bot.generate_response(chat_request.message, history)
+    #
+    # Phase 19: pass the patient's first name so an emergency response,
+    # if one is triggered, can address them by name. Splitting on the
+    # first space keeps this to a first name even if current_user.name is
+    # stored as a full name — matches how the response templates read.
+    first_name = current_user.name.split()[0] if current_user.name else None
+
+    # Phase 20: age comes from PatientProfile now that it exists. A
+    # simple None-if-missing lookup (not _get_or_create_profile from
+    # profile_routes.py) — a chat request shouldn't have the side effect
+    # of creating a profile row just because one doesn't exist yet; it
+    # should just proceed with age=None, exactly like it did before
+    # Phase 20 shipped.
+    profile = (
+        db.query(PatientProfile)
+        .filter(PatientProfile.user_id == current_user.id)
+        .first()
+    )
+    patient_age = profile.age if profile else None
+
+    # UI redesign: include_meta=True asks generate_response() for a third
+    # return value (is_emergency, sources) so the chat page can render the
+    # full-width emergency banner and the "Sources" row without guessing
+    # from the reply text — see src/chatbot.py's generate_response docstring.
+    reply_text, _updated_history, meta = bot.generate_response(
+        chat_request.message,
+        history,
+        patient_name=first_name,
+        patient_age=patient_age,
+        include_meta=True,
+    )
 
     db.add_all([
         ChatMessage(user_id=current_user.id, role="user", content=chat_request.message),
@@ -63,7 +117,11 @@ def send_message(
     ])
     db.commit()
 
-    return ChatResponse(reply=reply_text)
+    return ChatResponse(
+        reply=reply_text,
+        is_emergency=meta["is_emergency"],
+        sources=[ChatSource(**source) for source in meta["sources"]],
+    )
 
 
 @router.get("/history", response_model=list[ChatHistoryEntry])

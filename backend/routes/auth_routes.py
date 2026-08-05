@@ -21,7 +21,7 @@ from backend.auth.security import (
     create_access_token,
     register_user,
 )
-from backend.db.models import UserCondition
+from backend.db.models import PatientProfile, UserCondition
 from backend.deps import get_db
 from backend.schemas import LoginRequest, LoginResponse, RegisterRequest, RegisterResponse
 
@@ -47,6 +47,16 @@ def register(request: RegisterRequest, db: Session = Depends(get_db)):
         if cleaned_name:
             db.add(UserCondition(user_id=user.id, condition_name=cleaned_name))
     if request.conditions:
+        db.commit()
+
+    # Phase 20: only create a PatientProfile row if the patient actually
+    # filled in the (optional) profile section on the registration form.
+    # Skipping it entirely is valid — GET/PUT /profile creates the row
+    # lazily later, same as for pre-Phase-20 accounts. model_dump() here
+    # rather than exclude_unset, since at registration every field the
+    # form didn't collect is genuinely None, not "not yet decided".
+    if request.profile is not None:
+        db.add(PatientProfile(user_id=user.id, **request.profile.model_dump()))
         db.commit()
 
     return user

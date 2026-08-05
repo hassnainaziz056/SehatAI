@@ -69,11 +69,19 @@ class Retriever:
     def retrieve(self, query: str, top_k: int = 2) -> list[dict]:
         """
         Return up to top_k chunks relevant to `query`, each as
-        {"topic": ..., "text": ...}. Returns an empty list if retrieval is
-        unavailable, if the query fails for any reason, or if the best
-        matches aren't actually close enough to trust (see MAX_DISTANCE) —
-        callers should treat an empty list as "no reference material
-        available" and carry on.
+        {"topic": ..., "text": ..., "distance": ...}. Returns an empty
+        list if retrieval is unavailable, if the query fails for any
+        reason, or if the best matches aren't actually close enough to
+        trust (see MAX_DISTANCE) — callers should treat an empty list as
+        "no reference material available" and carry on.
+
+        UI redesign: `distance` was added to each returned dict (it was
+        previously only available via debug_top_k) so chat_routes.py can
+        surface it to the frontend as a plain-language confidence
+        indicator next to the chat page's source references, without a
+        second retrieval call. Existing callers that only read
+        chunk["topic"]/chunk["text"] are unaffected — this is purely an
+        additional key, not a shape change to anything already read.
         """
         if not self.available:
             return []
@@ -90,7 +98,7 @@ class Retriever:
             distances = results["distances"][0]
 
             return [
-                {"topic": metadata["topic"], "text": document_text}
+                {"topic": metadata["topic"], "text": document_text, "distance": distance}
                 for document_text, metadata, distance in zip(documents, metadatas, distances)
                 if distance <= MAX_DISTANCE
             ]

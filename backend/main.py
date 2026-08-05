@@ -18,7 +18,14 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from backend.db.models import Base
 from backend.db.session import engine
-from backend.routes import auth_routes, chat_routes, conditions_routes
+from backend.routes import (
+    auth_routes,
+    chat_routes,
+    conditions_routes,
+    dashboard_routes,
+    medication_routes,
+    profile_routes,
+)
 from src.chatbot import HealthcareChatbot
 
 
@@ -110,6 +117,9 @@ app.add_middleware(
 
 app.include_router(auth_routes.router)
 app.include_router(conditions_routes.router)
+app.include_router(profile_routes.router)
+app.include_router(medication_routes.router)
+app.include_router(dashboard_routes.router)
 app.include_router(chat_routes.router)
 
 

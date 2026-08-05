@@ -69,6 +69,92 @@
                 </div>
             </fieldset>
 
+            <fieldset class="profile-fieldset">
+                <legend>Health profile (optional)</legend>
+                <p class="field-hint">Helps SehatAI give you safer, more personal answers. Skip anything you'd
+                    rather not share now — you can always fill it in later from your profile page.</p>
+
+                <div class="profile-grid">
+                    <div class="field">
+                        <label for="profile-age">Age</label>
+                        <input type="number" id="profile-age" min="0" max="120">
+                    </div>
+                    <div class="field">
+                        <label for="profile-gender">Gender</label>
+                        <select id="profile-gender">
+                            <option value="">Prefer not to say</option>
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="profile-blood-group">Blood group</label>
+                        <select id="profile-blood-group">
+                            <option value="">Unknown</option>
+                            <option>A+</option>
+                            <option>A-</option>
+                            <option>B+</option>
+                            <option>B-</option>
+                            <option>AB+</option>
+                            <option>AB-</option>
+                            <option>O+</option>
+                            <option>O-</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="profile-height">Height (cm)</label>
+                        <input type="number" id="profile-height" min="0" step="0.1">
+                    </div>
+                    <div class="field">
+                        <label for="profile-weight">Weight (kg)</label>
+                        <input type="number" id="profile-weight" min="0" step="0.1">
+                    </div>
+                    <div class="field">
+                        <label for="profile-pregnancy">Pregnancy status</label>
+                        <select id="profile-pregnancy">
+                            <option value="">Not applicable</option>
+                            <option value="Pregnant">Pregnant</option>
+                            <option value="Not currently pregnant">Not currently pregnant</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="profile-smoking">Smoking status</label>
+                        <select id="profile-smoking">
+                            <option value="">Prefer not to say</option>
+                            <option value="Never smoked">Never smoked</option>
+                            <option value="Former smoker">Former smoker</option>
+                            <option value="Current smoker">Current smoker</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="profile-emergency-name">Emergency contact name</label>
+                        <input type="text" id="profile-emergency-name">
+                    </div>
+                    <div class="field">
+                        <label for="profile-emergency-phone">Emergency contact phone</label>
+                        <input type="tel" id="profile-emergency-phone">
+                    </div>
+                </div>
+
+                <div class="field profile-field--wide">
+                    <label for="profile-allergies">Allergies</label>
+                    <textarea id="profile-allergies" rows="2" placeholder="e.g. Penicillin, peanuts"></textarea>
+                </div>
+                <div class="field profile-field--wide">
+                    <label for="profile-medications">Current medications</label>
+                    <textarea id="profile-medications" rows="2"></textarea>
+                </div>
+                <div class="field profile-field--wide">
+                    <label for="profile-surgeries">Past surgeries</label>
+                    <textarea id="profile-surgeries" rows="2"></textarea>
+                </div>
+                <div class="field profile-field--wide">
+                    <label for="profile-history">Other medical history</label>
+                    <textarea id="profile-history" rows="2"></textarea>
+                </div>
+            </fieldset>
+
             <button type="submit" id="submit-btn" class="submit-btn">Create account</button>
         </form>
 

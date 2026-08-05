@@ -7,6 +7,11 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, TextStreamer
 
 from knowledge_base.retriever import Retriever
 from src.scope_guard import is_medical_question
+from src.emergency_detector import (
+    NATIONAL_EMERGENCY_NUMBER,
+    detect_emergency,
+    get_emergency_response,
+)
 
 # Shown to the user when a query is rejected before ever reaching the model.
 # Two distinct messages so it's clear (in logs/console) which gate caught it:
@@ -22,7 +27,6 @@ NO_MATCH_REFUSAL = (
     "I don't have reliable information on that specific condition right now. "
     "Could you tell me a bit more, or it may be best to check with a doctor or health worker directly."
 )
-_REFUSAL_MESSAGES = (OFF_TOPIC_REFUSAL, NO_MATCH_REFUSAL)
 
 # Plain small talk a doctor would naturally exchange with a patient before
 # getting into symptoms — these carry no medical keyword and have nothing
@@ -37,6 +41,42 @@ GREETING_PHRASES = {
     "what's up", "whats up",
     "assalam o alaikum", "assalamualaikum", "salam", "adaab",
 }
+
+# Messages that are medical in scope (they pass Layer 2's keyword gate) but
+# carry no actual symptom/condition information to retrieve or reason about
+# — "I am sick" is true of a thousand different conditions. Answering these
+# immediately means retrieval has to guess, and often latches onto whatever
+# generic illness document happens to be nearest in the vector space (e.g.
+# a diarrhea/dehydration doc) even though the patient never mentioned those
+# symptoms. A real doctor asks a follow-up question here instead of
+# guessing — so this bypasses retrieval and generation entirely and asks
+# one directly, the same short-circuit shape as a greeting or a refusal.
+# Exact-match only (after stripping trailing punctuation), same rule as
+# GREETING_PHRASES — "I'm sick and also have chest pain" carries real
+# information and should NOT match this list, so it still goes through
+# normal scope/retrieval handling below.
+VAGUE_COMPLAINT_PHRASES = {
+    "i am sick", "i'm sick", "im sick", "i feel sick",
+    "i am unwell", "i'm unwell", "im unwell", "i feel unwell",
+    "i am ill", "i'm ill", "im ill",
+    "i don't feel well", "i dont feel well", "i do not feel well",
+    "i am not well", "i'm not well", "im not well",
+    "i feel bad", "i feel unwell", "not feeling well", "not well",
+    "i am not feeling well", "i'm not feeling well",
+    "sick", "unwell", "ill",
+}
+CLARIFYING_QUESTION = (
+    "I'm sorry you're not feeling well. Could you tell me a bit more — "
+    "what symptoms are you noticing (like fever, pain, cough, or an upset "
+    "stomach), and how long have you had them? That'll help me give you "
+    "more useful guidance."
+)
+
+# Built here, after all three message constants exist, so this list is used
+# to keep boilerplate replies (refusals + the clarifying question) out of
+# _build_retrieval_query's search for the last real assistant reply to
+# anchor a follow-up query against.
+_REFUSAL_MESSAGES = (OFF_TOPIC_REFUSAL, NO_MATCH_REFUSAL, CLARIFYING_QUESTION)
 
 FOLLOWUP_MAX_WORDS = 12
 FOLLOWUP_REFERENTIAL_WORDS = (
@@ -97,6 +137,8 @@ class HealthcareChatbot:
             "If asked about anything outside this scope, decline the way a doctor would gently redirect a "
             f"patient back to their health, and say: \"{OFF_TOPIC_REFUSAL}\" "
             "Provide clear, accurate health guidance. "
+            "Keep your answers focused and complete — aim for around 120-180 words, and always finish your "
+            "last sentence rather than trailing off, even if that means being more concise. "
             "Always make clear you are an AI, not a licensed physician, and that serious or worsening symptoms "
             "need in-person medical care."
         )
@@ -134,7 +176,16 @@ class HealthcareChatbot:
         """
         previous_real_replies = [
             msg["content"] for msg in conversation_history
-            if msg["role"] == "assistant" and msg["content"] not in _REFUSAL_MESSAGES
+            if msg["role"] == "assistant"
+            and msg["content"] not in _REFUSAL_MESSAGES
+            # Emergency responses (Phase 19) are templated but vary in
+            # exact wording per call, so they can't be caught by the exact
+            # membership check above the way the other boilerplate replies
+            # are. Every emergency template — variant or not — always
+            # contains the national emergency number, so that's used as a
+            # reliable, cheap signal that this was boilerplate, not a real
+            # topical reply worth anchoring a follow-up query to.
+            and NATIONAL_EMERGENCY_NUMBER not in msg["content"]
         ]
         if previous_real_replies:
             excerpt = previous_real_replies[-1][:PREVIOUS_REPLY_EXCERPT_CHARS]
@@ -181,7 +232,14 @@ class HealthcareChatbot:
         print(f"\nSehatAI: {message}")
         return message, conversation_history
 
-    def generate_response(self, user_input: str, conversation_history: list) -> tuple[str, list]:
+    def generate_response(
+        self,
+        user_input: str,
+        conversation_history: list,
+        patient_name: str | None = None,
+        patient_age: int | None = None,
+        include_meta: bool = False,
+    ) -> tuple[str, list] | tuple[str, list, dict]:
         """
         Generate a response to user_input, given the conversation so far.
 
@@ -189,23 +247,72 @@ class HealthcareChatbot:
         self.conversation_history. This method never mutates the list it's
         given — it works on a local copy and returns the updated copy, so
         the caller decides what to do with it (e.g. save it to a database,
-        per user). Returns (response_text, updated_history).
+        per user). Returns (response_text, updated_history) by default.
+
+        Phase 19: patient_name and patient_age are optional (callers that
+        don't have them yet just don't pass them) and are only used to
+        personalize an emergency response, if one is triggered — see
+        emergency_detector.py. patient_age has no route to a real value
+        until Phase 20's profile table exists; until then callers simply
+        omit it and responses fall back to name-only or generic phrasing.
+
+        UI redesign: include_meta=True (used by backend/routes/chat_routes.py
+        so the frontend can render an emergency banner and source
+        references) additionally returns a third element, a dict with:
+          - "is_emergency": bool — True only when the emergency detector
+            fired and this is its fixed, templated response.
+          - "sources": list[{"topic": str, "distance": float}] — whatever
+            was retrieved and actually used to ground this reply, empty
+            for greetings/refusals/emergency responses/ungrounded replies.
+        Default is False so main.py's existing CLI loop (which unpacks a
+        plain 2-tuple) keeps working completely unchanged.
         """
         # Work on a local copy — never mutate the caller's list in place.
         history = list(conversation_history)
 
+        def _finish(text: str, updated_history: list, is_emergency: bool = False, sources: list | None = None):
+            if not include_meta:
+                return text, updated_history
+            return text, updated_history, {
+                "is_emergency": is_emergency,
+                "sources": sources or [],
+            }
+
+        # Checked before anything else, including greetings — an emergency
+        # phrase should never fall through to scope/retrieval/generation,
+        # no matter what else is in the message. See emergency_detector.py
+        # for why this is a fixed, templated response rather than a
+        # generated one.
+        emergency_category = detect_emergency(user_input)
+        if emergency_category:
+            emergency_response = get_emergency_response(
+                emergency_category, patient_name, patient_age
+            )
+            reply, updated_history = self._refuse(user_input, emergency_response, history)
+            return _finish(reply, updated_history, is_emergency=True)
+
         stripped_input = user_input.strip().lower().rstrip("?!.")
         is_greeting = stripped_input in GREETING_PHRASES
+
+        # Checked before the scope gate: a vague complaint like "I am sick"
+        # already passes Layer 2 (it contains "sick"), so without this check
+        # it would fall straight through to retrieval and generation, which
+        # is exactly the guessing behavior this is meant to prevent.
+        if not is_greeting and stripped_input in VAGUE_COMPLAINT_PHRASES:
+            reply, updated_history = self._refuse(user_input, CLARIFYING_QUESTION, history)
+            return _finish(reply, updated_history)
 
         retrieval_query = self._build_retrieval_query(user_input, history)
 
         if not is_greeting and not self._is_in_scope(user_input, retrieval_query):
-            return self._refuse(user_input, OFF_TOPIC_REFUSAL, history)
+            reply, updated_history = self._refuse(user_input, OFF_TOPIC_REFUSAL, history)
+            return _finish(reply, updated_history)
 
         retrieved = [] if is_greeting else self.retriever.retrieve(retrieval_query, top_k=2)
 
         if not is_greeting and self.retriever.available and not retrieved:
-            return self._refuse(user_input, NO_MATCH_REFUSAL, history)
+            reply, updated_history = self._refuse(user_input, NO_MATCH_REFUSAL, history)
+            return _finish(reply, updated_history)
 
         if retrieved:
             context_block = "\n\n".join(
@@ -242,7 +349,7 @@ class HealthcareChatbot:
         with torch.no_grad():
             outputs = self.model.generate(
                 **inputs,
-                max_new_tokens=256,
+                max_new_tokens=400,
                 temperature=0.7,
                 top_p=0.9,
                 do_sample=True,
@@ -254,4 +361,9 @@ class HealthcareChatbot:
         response_text = self.tokenizer.decode(new_tokens, skip_special_tokens=True)
 
         history.append({"role": "assistant", "content": response_text})
-        return response_text, history
+
+        sources = [
+            {"topic": chunk["topic"], "distance": chunk["distance"]}
+            for chunk in retrieved
+        ] if retrieved else []
+        return _finish(response_text, history, sources=sources)
