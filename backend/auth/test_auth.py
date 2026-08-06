@@ -46,15 +46,12 @@ def main() -> None:
         # 1. Register a new user.
         # ------------------------------------------------------------
         print("\n[1] Registering a new user...")
-        # UI redesign: register_user() no longer takes `name` — registration
-        # is credentials-only now (see security.register_user's docstring).
-        user = register_user(session, email=test_email, password=correct_password)
+        # Single-workflow rebuild: registration collects name + email +
+        # password in one step — there is no separate wizard (see
+        # security.register_user's docstring).
+        user = register_user(session, name="Test Patient", email=test_email, password=correct_password)
         check("User created with an assigned id", user.id is not None)
-        check(
-            "New user starts with no name and an incomplete profile "
-            "(both are filled in by the Patient Profile Wizard, not registration)",
-            user.name is None and user.profile_completed is False,
-        )
+        check("New user's name matches what was registered", user.name == "Test Patient")
         check(
             "Raw password is NOT stored anywhere on the user row",
             user.password_hash != correct_password,

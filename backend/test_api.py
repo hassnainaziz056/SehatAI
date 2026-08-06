@@ -1,9 +1,11 @@
 """
-backend/test_api.py — Phase 16: FastAPI Wiring
+backend/test_api.py — End-to-end smoke test (single-workflow rebuild)
 
-End-to-end smoke test of the whole running API — register, login, add a
-condition, chat twice, read history back, confirm an unauthenticated
-request is rejected. No Postman needed.
+Exercises the whole running API for the Register -> Login -> Home ->
+Patient History / Chatbot workflow: register, login, save a Patient
+History record, add/remove a condition, chat three times (including an
+emergency phrase), read history back, confirm an unauthenticated request
+is rejected. No Postman needed.
 
 Usage:
     python -m backend.test_api
@@ -32,7 +34,7 @@ def check(description: str, passed: bool) -> None:
 
 def main() -> None:
     print("=" * 60)
-    print("   Phase 16 — API End-to-End Smoke Test")
+    print("   API End-to-End Smoke Test")
     print("=" * 60)
 
     test_email = f"test.api.{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S%f')}@example.com"
@@ -51,31 +53,34 @@ def main() -> None:
         check("Health check returns 200", resp.status_code == 200)
 
         # ------------------------------------------------------------
-        # 2. Register — UI redesign: credentials only (email + password +
-        #    confirm_password), nothing medical.
+        # 2. Register — single-workflow rebuild: name + email + password
+        #    collected in one step, nothing else.
         # ------------------------------------------------------------
         print("\n[2] POST /register...")
         resp = client.post("/register", json={
+            "name": "Test Patient",
             "email": test_email, "password": password, "confirm_password": password,
         })
         check("Register returns 201", resp.status_code == 201)
         check("Register response has an id", resp.json().get("id") is not None)
+        check("Register response echoes the name", resp.json().get("name") == "Test Patient")
 
         print("\n[2b] Registering the same email again (should be rejected)...")
         dup_resp = client.post("/register", json={
+            "name": "Someone Else",
             "email": test_email, "password": "another-password", "confirm_password": "another-password",
         })
         check("Duplicate registration returns 409", dup_resp.status_code == 409)
 
         print("\n[2c] Registering with mismatched passwords (should be rejected)...")
         mismatch_resp = client.post("/register", json={
+            "name": "Someone Else",
             "email": f"mismatch.{test_email}", "password": password, "confirm_password": "different",
         })
         check("Mismatched confirm_password returns 422", mismatch_resp.status_code == 422)
 
         # ------------------------------------------------------------
-        # 3. Login — UI redesign: response reports profile_completed
-        #    inline so the frontend knows whether to route to the wizard.
+        # 3. Login — always goes straight to Home, no wizard branching.
         # ------------------------------------------------------------
         print("\n[3] POST /login...")
         resp = client.post("/login", json={"email": test_email, "password": password})
@@ -83,10 +88,6 @@ def main() -> None:
         login_body = resp.json()
         token = login_body.get("access_token")
         check("Login returns an access token", bool(token))
-        check(
-            "A freshly registered user has profile_completed=False",
-            login_body.get("profile_completed") is False,
-        )
         auth_headers = {"Authorization": f"Bearer {token}"}
 
         print("\n[3b] Logging in with the wrong password (should fail)...")
@@ -94,102 +95,76 @@ def main() -> None:
         check("Wrong password returns 401", bad_resp.status_code == 401)
 
         # ------------------------------------------------------------
-        # 4. Patient Profile Wizard — one-shot submit of all 5 steps.
+        # 4. Patient History — single PUT /profile with the whole record.
         # ------------------------------------------------------------
-        print("\n[4] GET /profile/status before completing the wizard...")
-        resp = client.get("/profile/status", headers=auth_headers)
-        check("Profile status returns 200", resp.status_code == 200)
-        check("Wizard not yet completed", resp.json().get("profile_completed") is False)
+        print("\n[4] GET /profile before saving any history...")
+        resp = client.get("/profile", headers=auth_headers)
+        check("Get profile returns 200", resp.status_code == 200)
+        check("A freshly registered user's profile starts with no age set", resp.json().get("age") is None)
 
-        print("\n[4b] POST /profile/wizard...")
-        resp = client.post("/profile/wizard", headers=auth_headers, json={
-            "full_name": "Test Patient",
+        print("\n[4b] PUT /profile...")
+        resp = client.put("/profile", headers=auth_headers, json={
+            "full_name": "Test Patient Updated",
             "age": 34,
             "gender": "Female",
             "height_cm": 165,
             "weight_kg": 60,
             "blood_group": "O+",
-            "conditions": ["diabetes", "hypertension"],
             "allergies": "Penicillin",
             "surgeries": None,
+            "medications": "Metformin 500mg twice daily",
             "family_history": "Diabetes (mother)",
             "smoking_status": "Never smoked",
             "alcohol_status": "Never",
             "pregnancy_status": None,
-            "medicines": [
-                {"name": "Metformin", "dosage": "500mg", "frequency": "Twice daily",
-                 "morning": True, "night": True, "start_date": "2026-07-01"},
-            ],
             "emergency_contact_name": "Ali Khan",
-            "emergency_contact_relationship": "Spouse",
             "emergency_contact_phone": "0300-1234567",
         })
-        check("Wizard completion returns 201", resp.status_code == 201)
-        check("Wizard response reports profile_completed=True", resp.json().get("profile_completed") is True)
+        check("Profile update returns 200", resp.status_code == 200)
+        updated = resp.json()
+        check("Profile update reports the new name", updated.get("full_name") == "Test Patient Updated")
+        check("Profile update reports the new age", updated.get("age") == 34)
+        check("Profile update reports current medicines", updated.get("medications") == "Metformin 500mg twice daily")
 
-        print("\n[4c] GET /profile/status after completing the wizard...")
-        resp = client.get("/profile/status", headers=auth_headers)
-        check("Wizard now shows completed", resp.json().get("profile_completed") is True)
+        print("\n[4c] GET /profile after saving...")
+        resp = client.get("/profile", headers=auth_headers)
+        check("Profile now shows the saved age", resp.json().get("age") == 34)
 
         # ------------------------------------------------------------
-        # 5. Conditions — the wizard's conditions list should already
-        #    have created these rows; confirm, then add one more the old
-        #    way to prove the two entry points share the same table.
+        # 5. Conditions — the Patient History page's Diseases checklist.
         # ------------------------------------------------------------
-        print("\n[5] GET /conditions (from the wizard)...")
+        print("\n[5] GET /conditions/available...")
+        resp = client.get("/conditions/available")
+        check("Available conditions returns 200", resp.status_code == 200)
+        check("Available conditions is a non-empty list", len(resp.json()) > 0)
+
+        print("\n[5b] POST /conditions...")
+        resp = client.post("/conditions", json={"condition_name": "diabetes"}, headers=auth_headers)
+        check("Add condition returns 201", resp.status_code == 201)
+        condition_id = resp.json()["id"]
+
+        resp = client.post("/conditions", json={"condition_name": "hypertension"}, headers=auth_headers)
+        check("Add second condition returns 201", resp.status_code == 201)
+
+        print("\n[5c] GET /conditions...")
         resp = client.get("/conditions", headers=auth_headers)
         check("List conditions returns 200", resp.status_code == 200)
         condition_names = [c["condition_name"] for c in resp.json()]
-        check("Wizard-submitted conditions appear in the list",
+        check("Both added conditions appear in the list",
               "diabetes" in condition_names and "hypertension" in condition_names)
 
-        print("\n[5b] POST /conditions (adding one more directly)...")
-        resp = client.post("/conditions", json={"condition_name": "asthma"}, headers=auth_headers)
-        check("Add condition returns 201", resp.status_code == 201)
+        print("\n[5d] DELETE /conditions/{id}...")
+        resp = client.delete(f"/conditions/{condition_id}", headers=auth_headers)
+        check("Delete condition returns 204", resp.status_code == 204)
 
-        # ------------------------------------------------------------
-        # 5c. Medicines page — list what the wizard created, then add
-        #     one more directly and mark a dose taken.
-        # ------------------------------------------------------------
-        print("\n[5c] GET /medications (from the wizard)...")
-        resp = client.get("/medications", headers=auth_headers)
-        check("List medications returns 200", resp.status_code == 200)
-        meds = resp.json()
-        check("Wizard-submitted medicine appears in the list",
-              any(m["name"] == "Metformin" for m in meds))
-        metformin_id = next(m["id"] for m in meds if m["name"] == "Metformin")
-
-        print("\n[5d] POST /medications (adding one more directly)...")
-        resp = client.post("/medications", headers=auth_headers, json={
-            "name": "Vitamin D", "dosage": "1000 IU", "frequency": "Once daily", "afternoon": True,
-        })
-        check("Add medication returns 201", resp.status_code == 201)
-
-        print("\n[5e] POST /medications/{id}/taken...")
-        resp = client.post(f"/medications/{metformin_id}/taken", headers=auth_headers, json={"slot": "morning"})
-        check("Marking a dose taken returns 201", resp.status_code == 201)
-
-        # ------------------------------------------------------------
-        # 5f. Dashboard — the new landing page's single aggregate call.
-        # ------------------------------------------------------------
-        print("\n[5f] GET /dashboard...")
-        resp = client.get("/dashboard", headers=auth_headers)
-        check("Dashboard returns 200", resp.status_code == 200)
-        dashboard = resp.json()
-        check("Dashboard health summary has the wizard's name", dashboard["health_summary"]["name"] == "Test Patient")
-        check(
-            "Dashboard medicine schedule includes today's Metformin morning slot as taken",
-            any(
-                slot["medication_id"] == metformin_id and slot["slot"] == "morning" and slot["status"] == "taken"
-                for slot in dashboard["medicine_schedule_today"]
-            ),
-        )
-        check("Dashboard health timeline is non-empty", len(dashboard["health_timeline"]) > 0)
+        resp = client.get("/conditions", headers=auth_headers)
+        remaining_names = [c["condition_name"] for c in resp.json()]
+        check("Deleted condition no longer appears in the list", "diabetes" not in remaining_names)
 
         # ------------------------------------------------------------
         # 6. Chat — two messages, second referencing the first, proving
-        #    history is actually threaded through from the database.
-        #    UI redesign: also checks the new is_emergency/sources fields.
+        #    history is actually threaded through from the database, plus
+        #    an emergency phrase. Checks the is_emergency/sources fields.
         # ------------------------------------------------------------
         print("\n[6] POST /chat (first message)...")
         first_message = "I've had a fever and headache for two days."
@@ -241,14 +216,15 @@ def main() -> None:
         )
 
         # ------------------------------------------------------------
-        # 8. Auth gate — /chat without a token should be rejected.
+        # 8. Auth gate — protected routes without a token should be
+        #    rejected.
         # ------------------------------------------------------------
         print("\n[8] POST /chat with no token (should fail)...")
         resp = client.post("/chat", json={"message": "hello"})
         check("Unauthenticated chat request returns 401", resp.status_code == 401)
 
-        print("\n[8b] GET /conditions with a garbage token (should fail)...")
-        resp = client.get("/conditions", headers={"Authorization": "Bearer not-a-real-token"})
+        print("\n[8b] GET /profile with a garbage token (should fail)...")
+        resp = client.get("/profile", headers={"Authorization": "Bearer not-a-real-token"})
         check("Garbage token returns 401", resp.status_code == 401)
 
     # ------------------------------------------------------------

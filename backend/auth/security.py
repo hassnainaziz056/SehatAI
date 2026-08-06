@@ -111,16 +111,13 @@ class EmailAlreadyRegisteredError(Exception):
     pass
 
 
-def register_user(session: Session, email: str, password: str) -> User:
+def register_user(session: Session, name: str, email: str, password: str) -> User:
     """Create a new User row with a hashed password.
 
-    UI redesign: no longer takes `name` -- registration is credentials-only
-    now (see schemas.RegisterRequest's docstring). The new user's `name`
-    starts as None and `profile_completed` starts False (both column
-    defaults on the User model); `name` gets filled in, and
-    profile_completed flips to True, only once the patient finishes the
-    post-login Patient Profile Wizard (see profile_routes.py's POST
-    /profile/wizard).
+    Single-workflow rebuild: registration collects name + email +
+    password in one step (see schemas.RegisterRequest's docstring) --
+    there is no separate wizard, so `name` is required here and set
+    immediately, not filled in later.
 
     Raises EmailAlreadyRegisteredError instead of letting the database's
     UNIQUE constraint surface as a raw IntegrityError, so callers (Phase
@@ -131,7 +128,7 @@ def register_user(session: Session, email: str, password: str) -> User:
     if existing is not None:
         raise EmailAlreadyRegisteredError(f"Email already registered: {email}")
 
-    user = User(email=email, password_hash=hash_password(password))
+    user = User(name=name, email=email, password_hash=hash_password(password))
     session.add(user)
     session.commit()
     session.refresh(user)

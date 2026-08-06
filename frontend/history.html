@@ -53,21 +53,22 @@
                         <h2>👤 Personal Information</h2>
                     </div>
                     <div class="record-grid">
-                        <div class="field"><label for="rf-name">Full name</label><input type="text" id="rf-name"></div>
-                        <div class="field"><label for="rf-age">Age</label><input type="number" id="rf-age" min="0"
-                                max="120"></div>
-                        <div class="field">
+                        <div class="form-group"><label for="rf-name">Full name</label><input type="text" id="rf-name"
+                                class="form-control"></div>
+                        <div class="form-group"><label for="rf-age">Age</label><input type="number" id="rf-age" min="0"
+                                max="120" class="form-control"></div>
+                        <div class="form-group">
                             <label for="rf-gender">Gender</label>
-                            <select id="rf-gender">
+                            <select id="rf-gender" class="form-control">
                                 <option value="">Prefer not to say</option>
                                 <option>Male</option>
                                 <option>Female</option>
                                 <option>Other</option>
                             </select>
                         </div>
-                        <div class="field">
+                        <div class="form-group">
                             <label for="rf-blood-group">Blood group</label>
-                            <select id="rf-blood-group">
+                            <select id="rf-blood-group" class="form-control">
                                 <option value="">Unknown</option>
                                 <option>A+</option>
                                 <option>A-</option>
@@ -79,10 +80,10 @@
                                 <option>O-</option>
                             </select>
                         </div>
-                        <div class="field"><label for="rf-height">Height (cm)</label><input type="number" id="rf-height"
-                                min="0" step="0.1"></div>
-                        <div class="field"><label for="rf-weight">Weight (kg)</label><input type="number" id="rf-weight"
-                                min="0" step="0.1"></div>
+                        <div class="form-group"><label for="rf-height">Height (cm)</label><input type="number"
+                                id="rf-height" min="0" step="0.1" class="form-control"></div>
+                        <div class="form-group"><label for="rf-weight">Weight (kg)</label><input type="number"
+                                id="rf-weight" min="0" step="0.1" class="form-control"></div>
                     </div>
                 </section>
 
@@ -102,13 +103,20 @@
                         <h2>⚠️ Allergies &amp; Surgical History</h2>
                     </div>
                     <div class="record-grid">
-                        <div class="field record-row--wide"><label for="rf-allergies">Allergies</label><textarea
-                                id="rf-allergies" rows="2" placeholder="e.g. Penicillin, peanuts"></textarea></div>
-                        <div class="field record-row--wide"><label for="rf-surgeries">Past surgeries</label><textarea
-                                id="rf-surgeries" rows="2"></textarea></div>
-                        <div class="field record-row--wide"><label for="rf-family-history">Family
+                        <div class="form-group record-row--wide"><label for="rf-allergies">Allergies</label><textarea
+                                id="rf-allergies" rows="2" placeholder="e.g. Penicillin, peanuts"
+                                class="form-control"></textarea></div>
+                        <div class="form-group record-row--wide"><label for="rf-medications">Current
+                                medicines</label><textarea id="rf-medications" rows="2"
+                                placeholder="e.g. Metformin 500mg twice daily" class="form-control"></textarea>
+                        </div>
+                        <div class="form-group record-row--wide"><label for="rf-surgeries">Past
+                                surgeries</label><textarea id="rf-surgeries" rows="2" class="form-control"></textarea>
+                        </div>
+                        <div class="form-group record-row--wide"><label for="rf-family-history">Family
                                 history</label><textarea id="rf-family-history" rows="2"
-                                placeholder="e.g. Diabetes (mother), Heart disease (father)"></textarea></div>
+                                placeholder="e.g. Diabetes (mother), Heart disease (father)"
+                                class="form-control"></textarea></div>
                     </div>
                 </section>
 
@@ -118,27 +126,27 @@
                         <h2>🌱 Lifestyle</h2>
                     </div>
                     <div class="record-grid">
-                        <div class="field">
+                        <div class="form-group">
                             <label for="rf-smoking">Smoking status</label>
-                            <select id="rf-smoking">
+                            <select id="rf-smoking" class="form-control">
                                 <option value="">Prefer not to say</option>
                                 <option value="Never smoked">Never smoked</option>
                                 <option value="Former smoker">Former smoker</option>
                                 <option value="Current smoker">Current smoker</option>
                             </select>
                         </div>
-                        <div class="field">
+                        <div class="form-group">
                             <label for="rf-alcohol">Alcohol use</label>
-                            <select id="rf-alcohol">
+                            <select id="rf-alcohol" class="form-control">
                                 <option value="">Prefer not to say</option>
                                 <option value="Never">Never</option>
                                 <option value="Occasionally">Occasionally</option>
                                 <option value="Regularly">Regularly</option>
                             </select>
                         </div>
-                        <div class="field" id="pregnancy-field">
+                        <div class="form-group" id="pregnancy-field">
                             <label for="rf-pregnancy">Pregnancy status</label>
-                            <select id="rf-pregnancy">
+                            <select id="rf-pregnancy" class="form-control">
                                 <option value="">Not applicable</option>
                                 <option value="Pregnant">Pregnant</option>
                                 <option value="Not currently pregnant">Not currently pregnant</option>
@@ -153,10 +161,10 @@
                         <h2>🚨 Emergency Contact</h2>
                     </div>
                     <div class="record-grid">
-                        <div class="field"><label for="rf-emergency-name">Contact name</label><input type="text"
-                                id="rf-emergency-name"></div>
-                        <div class="field"><label for="rf-emergency-phone">Contact phone</label><input type="tel"
-                                id="rf-emergency-phone"></div>
+                        <div class="form-group"><label for="rf-emergency-name">Contact name</label><input type="text"
+                                id="rf-emergency-name" class="form-control"></div>
+                        <div class="form-group"><label for="rf-emergency-phone">Contact phone</label><input type="tel"
+                                id="rf-emergency-phone" class="form-control"></div>
                     </div>
                 </section>
 

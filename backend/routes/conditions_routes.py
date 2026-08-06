@@ -10,7 +10,7 @@ there's no way to add a condition to a different account by editing a
 request.
 """
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from backend.conditions_catalog import AVAILABLE_CONDITIONS
@@ -66,3 +66,21 @@ def add_condition(
     db.commit()
     db.refresh(condition)
     return condition
+
+@router.delete("/{condition_id}", status_code=204)
+def delete_condition(
+    condition_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """The Health History page's condition checklist is editable in both
+    directions (patients can un-check a condition that no longer
+    applies, not just add new ones). 404, not 403, on a condition that
+    belongs to someone else -- avoids leaking whether a given id exists
+    at all to a caller who doesn't own it."""
+    condition = db.query(UserCondition).filter(UserCondition.id == condition_id).first()
+    if condition is None or condition.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Condition not found")
+    db.delete(condition)
+    db.commit()
+    return None

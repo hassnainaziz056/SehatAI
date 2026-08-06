@@ -19,25 +19,15 @@ function hideStatus() {
     statusBox.textContent = "";
 }
 
-// Auto-check stored session
-(async function checkExistingToken() {
+// Auto-redirect if already logged in — single-workflow rebuild means
+// there's no profile-completed check to make, just "does a token exist".
+// A stale/expired token still gets caught the normal way: home.html loads
+// common.js, which calls authedFetch on its first request and bounces
+// back to login.html on a 401.
+(function redirectIfLoggedIn() {
     const token = localStorage.getItem(SEHATAI_TOKEN_KEY);
-    if (!token) return;
-
-    try {
-        const resp = await fetch(`${API_BASE_URL}/profile/status`, {
-            headers: { "Authorization": `Bearer ${token}` }
-        });
-        if (resp.ok) {
-            const data = await resp.json();
-            if (data.profile_completed) {
-                window.location.href = "dashboard.html";
-            } else {
-                window.location.href = "wizard.html";
-            }
-        }
-    } catch (e) {
-        // Token invalid or network issue, remain on login page
+    if (token) {
+        window.location.href = "home.html";
     }
 })();
 
@@ -61,12 +51,7 @@ form.addEventListener("submit", async (e) => {
         if (response.ok) {
             const data = await response.json();
             localStorage.setItem(SEHATAI_TOKEN_KEY, data.access_token);
-
-            if (data.profile_completed) {
-                window.location.href = "dashboard.html";
-            } else {
-                window.location.href = "wizard.html";
-            }
+            window.location.href = "home.html";
         } else if (response.status === 401) {
             showStatus("Incorrect email or password.");
         } else {

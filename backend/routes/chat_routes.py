@@ -49,13 +49,68 @@ def send_message(
     )
     condition_names = [row[0] for row in condition_rows]
 
+    # Single-workflow rebuild: the chatbot should act like a doctor who
+    # already has the patient's chart open, not just their name. Pull the
+    # full Patient History record (if one exists) and fold every filled-in
+    # field into the system context, not just age -- see chat_routes.py
+    # module docstring. Queried fresh every request (not cached on the
+    # user object) so an edited Patient History page is picked up
+    # immediately, not just at login.
+    profile = (
+        db.query(PatientProfile)
+        .filter(PatientProfile.user_id == current_user.id)
+        .first()
+    )
+
     patient_context = f"\n\nThe patient you're speaking with is named {current_user.name}."
     if condition_names:
         patient_context += (
             " They have the following condition(s) on file: "
             + ", ".join(condition_names)
-            + ". Keep this in mind where it's relevant, but don't force it into every reply."
+            + "."
         )
+    if profile is not None:
+        history_bits = []
+        if profile.gender:
+            history_bits.append(f"gender: {profile.gender}")
+        if profile.blood_group:
+            history_bits.append(f"blood group: {profile.blood_group}")
+        if profile.height_cm:
+            history_bits.append(f"height: {profile.height_cm} cm")
+        if profile.weight_kg:
+            history_bits.append(f"weight: {profile.weight_kg} kg")
+        if profile.pregnancy_status:
+            history_bits.append(f"pregnancy status: {profile.pregnancy_status}")
+        if profile.smoking_status:
+            history_bits.append(f"smoking status: {profile.smoking_status}")
+        if profile.alcohol_status:
+            history_bits.append(f"alcohol use: {profile.alcohol_status}")
+        if profile.allergies:
+            history_bits.append(f"known allergies: {profile.allergies}")
+        if profile.medications:
+            history_bits.append(f"current medicines: {profile.medications}")
+        if profile.surgeries:
+            history_bits.append(f"past surgeries: {profile.surgeries}")
+        if profile.family_history:
+            history_bits.append(f"family history: {profile.family_history}")
+        if profile.medical_history:
+            history_bits.append(f"other medical history: {profile.medical_history}")
+        if history_bits:
+            patient_context += (
+                " Their Patient History record on file also shows -- "
+                + "; ".join(history_bits)
+                + "."
+            )
+        if profile.emergency_contact_name or profile.emergency_contact_phone:
+            history_bits_emergency = " and ".join(
+                filter(None, [profile.emergency_contact_name, profile.emergency_contact_phone])
+            )
+            patient_context += f" Their listed emergency contact is: {history_bits_emergency}."
+    patient_context += (
+        " Use this history as context where it's relevant to the question, "
+        "the way a doctor would glance at a chart -- don't recite it back "
+        "or force it into every reply."
+    )
     system_message = bot.system_prompt + patient_context
 
     # Reconstruct conversation_history in the exact shape generate_response()
@@ -86,17 +141,10 @@ def send_message(
     # stored as a full name — matches how the response templates read.
     first_name = current_user.name.split()[0] if current_user.name else None
 
-    # Phase 20: age comes from PatientProfile now that it exists. A
-    # simple None-if-missing lookup (not _get_or_create_profile from
-    # profile_routes.py) — a chat request shouldn't have the side effect
-    # of creating a profile row just because one doesn't exist yet; it
-    # should just proceed with age=None, exactly like it did before
-    # Phase 20 shipped.
-    profile = (
-        db.query(PatientProfile)
-        .filter(PatientProfile.user_id == current_user.id)
-        .first()
-    )
+    # age comes from the PatientProfile fetched above (a simple
+    # None-if-missing lookup, not _get_or_create_profile from
+    # profile_routes.py -- a chat request shouldn't have the side effect
+    # of creating a profile row just because one doesn't exist yet).
     patient_age = profile.age if profile else None
 
     # UI redesign: include_meta=True asks generate_response() for a third

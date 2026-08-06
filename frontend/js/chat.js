@@ -1,25 +1,19 @@
 /**
- * frontend/js/chat.js — Phase 18, completely redesigned (UI/UX redesign v2).
+ * frontend/js/chat.js — Chatbot (single-workflow rebuild)
  *
- * Two things happen before any chat UI renders:
- *   1. GET /profile/status — if profile_completed is false, the profile
- *      gate is shown instead of the chat panel/composer, and no chat
- *      request is ever possible from this page (the composer form isn't
- *      even shown — see chat.html). This is a hard gate, not a
- *      dismissible banner: there is no way to bypass it from this page.
- *   2. GET /chat/history — once the gate passes, load and render the
- *      existing conversation.
+ * Loads the patient's conversation history (GET /chat/history) on page
+ * load, then sends new messages via POST /chat. There is no
+ * profile-completion gate anymore — Patient History is optional and can
+ * be filled in any time from the Patient History page; the chatbot works
+ * (with or without it) as soon as a patient is logged in.
  *
- * Sending a message now also reads is_emergency/sources off the response
- * (backend/schemas.py's ChatResponse, extended for this redesign) to
- * decide whether to render the full-width emergency banner and the
- * "Sources" row, instead of guessing from the reply text.
+ * Reads is_emergency/sources off the response (backend/schemas.py's
+ * ChatResponse) to decide whether to render the full-width emergency
+ * banner and the "Sources" row, instead of guessing from the reply text.
  */
 
 const { authedFetch, toast } = window.SehatAI;
 
-const gatePanel = document.getElementById("chat-gate-panel");
-const realPanel = document.getElementById("chat-real-panel");
 const composerForm = document.getElementById("composer");
 const chatLog = document.getElementById("chat-log");
 const messageInput = document.getElementById("message-input");
@@ -227,27 +221,8 @@ composerForm?.addEventListener("submit", async (event) => {
 });
 
 async function init() {
-    try {
-        const response = await authedFetch("/profile/status");
-        if (!response.ok) throw new Error(`Server responded with ${response.status}`);
-        const status = await response.json();
-
-        if (!status.profile_completed) {
-            gatePanel.style.display = "flex";
-            realPanel.style.display = "none";
-            composerForm.style.display = "none";
-            return;
-        }
-
-        gatePanel.style.display = "none";
-        realPanel.style.display = "flex";
-        composerForm.style.display = "block";
-        await loadHistory();
-    } catch (err) {
-        if (err.message === "Session expired") return;
-        toast("Couldn't verify your profile status. Please refresh.", "error");
-        console.error("Failed to load /profile/status:", err);
-    }
+    await loadHistory();
+    messageInput?.focus();
 }
 
 init();

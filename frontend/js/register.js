@@ -22,6 +22,7 @@ form.addEventListener("submit", async (e) => {
     e.preventDefault();
     hideStatus();
 
+    const name = document.getElementById("name").value.trim();
     const email = document.getElementById("email").value.trim();
     const password = document.getElementById("password").value;
     const confirm_password = document.getElementById("confirm_password").value;
@@ -38,7 +39,7 @@ form.addEventListener("submit", async (e) => {
         const response = await fetch(`${API_BASE_URL}/register`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email, password, confirm_password }),
+            body: JSON.stringify({ name, email, password, confirm_password }),
         });
 
         if (response.ok) {
@@ -57,7 +58,7 @@ form.addEventListener("submit", async (e) => {
             try {
                 const errData = await response.json();
                 if (errData.detail) errorMsg = typeof errData.detail === 'string' ? errData.detail : JSON.stringify(errData.detail);
-            } catch(e) {}
+            } catch (e) { }
             showStatus(errorMsg);
         }
     } catch (err) {

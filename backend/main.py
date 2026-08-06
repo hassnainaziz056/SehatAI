@@ -22,8 +22,6 @@ from backend.routes import (
     auth_routes,
     chat_routes,
     conditions_routes,
-    dashboard_routes,
-    medication_routes,
     profile_routes,
 )
 from src.chatbot import HealthcareChatbot
@@ -115,17 +113,35 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from pathlib import Path
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+
 app.include_router(auth_routes.router)
 app.include_router(conditions_routes.router)
 app.include_router(profile_routes.router)
-app.include_router(medication_routes.router)
-app.include_router(dashboard_routes.router)
 app.include_router(chat_routes.router)
+
+FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
+if FRONTEND_DIR.exists():
+    if (FRONTEND_DIR / "css").exists():
+        app.mount("/css", StaticFiles(directory=FRONTEND_DIR / "css"), name="css")
+    if (FRONTEND_DIR / "js").exists():
+        app.mount("/js", StaticFiles(directory=FRONTEND_DIR / "js"), name="js")
+
+    @app.get("/", include_in_schema=False)
+    def root_page():
+        return FileResponse(FRONTEND_DIR / "login.html")
+
+    @app.get("/{page}.html", include_in_schema=False)
+    def serve_html_page(page: str):
+        page_file = FRONTEND_DIR / f"{page}.html"
+        if page_file.exists():
+            return FileResponse(page_file)
+        return FileResponse(FRONTEND_DIR / "login.html")
 
 
 @app.get("/health", tags=["meta"])
 def health_check():
-    """Plain liveness check — no auth required. Useful for confirming the
-    server is up before trying anything else (e.g. from test_api.py, or
-    a load balancer / uptime monitor later)."""
+    """Plain liveness check — no auth required."""
     return {"status": "ok"}

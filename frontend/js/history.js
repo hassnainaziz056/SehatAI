@@ -1,106 +1,217 @@
 /**
- * frontend/js/history.js — Health History & Timeline Loader
+ * frontend/js/history.js — Patient History (single-workflow rebuild)
+ *
+ * Single page: loads the patient's record (GET /profile), their selected
+ * conditions (GET /conditions) against the fixed catalog
+ * (GET /conditions/available), and lets them edit and save everything in
+ * one go. Saving does two things:
+ *   1. PUT /profile with every form field (including full_name).
+ *   2. Diffs the conditions checklist against what the server already
+ *      has on file, and issues POST /conditions / DELETE /conditions/{id}
+ *      only for what actually changed.
+ *
+ * Depends on common.js (window.SehatAI.authedFetch/toast) being loaded
+ * first.
  */
-const API_BASE_URL = (window.location.port === "8000") ? window.location.origin : "http://127.0.0.1:8000";
-const SEHATAI_TOKEN_KEY = "sehatai_token";
 
-const token = localStorage.getItem(SEHATAI_TOKEN_KEY);
-if (!token) {
-    window.location.href = "login.html";
+const { authedFetch, toast } = window.SehatAI;
+
+const form = document.getElementById("record-form");
+const saveBtn = document.getElementById("record-save-btn");
+const statusEl = document.getElementById("record-status");
+const checklistEl = document.getElementById("conditions-checklist");
+const ringFill = document.getElementById("completion-ring-fill");
+const ringLabel = document.getElementById("completion-ring-label");
+const progressBar = document.getElementById("completion-bar");
+const missingEl = document.getElementById("completion-missing");
+
+// Circumference of the progress ring circle (r=36 -> 2*pi*36 ≈ 226.19,
+// matching the stroke-dasharray already set in history.html).
+const RING_CIRCUMFERENCE = 226;
+
+const FIELD_IDS = {
+    full_name: "rf-name",
+    age: "rf-age",
+    gender: "rf-gender",
+    blood_group: "rf-blood-group",
+    height_cm: "rf-height",
+    weight_kg: "rf-weight",
+    allergies: "rf-allergies",
+    medications: "rf-medications",
+    surgeries: "rf-surgeries",
+    family_history: "rf-family-history",
+    smoking_status: "rf-smoking",
+    alcohol_status: "rf-alcohol",
+    pregnancy_status: "rf-pregnancy",
+    emergency_contact_name: "rf-emergency-name",
+    emergency_contact_phone: "rf-emergency-phone",
+};
+
+const NUMBER_FIELDS = new Set(["age", "height_cm", "weight_kg"]);
+
+// Fields counted toward the completion ring. full_name is deliberately
+// excluded -- it's collected at registration already, so it shouldn't
+// hold the ring back for someone who hasn't touched this page yet.
+const COMPLETION_FIELDS = [
+    "age", "gender", "blood_group", "height_cm", "weight_kg",
+    "allergies", "medications", "surgeries", "family_history",
+    "smoking_status", "alcohol_status",
+    "emergency_contact_name", "emergency_contact_phone",
+];
+
+let availableConditions = [];
+let currentConditions = []; // [{id, condition_name}]
+let selectedConditionNames = new Set();
+
+function setFieldValue(key, value) {
+    const el = document.getElementById(FIELD_IDS[key]);
+    if (!el) return;
+    el.value = value === null || value === undefined ? "" : value;
 }
 
-renderPortalLayout();
+function getFieldValue(key) {
+    const el = document.getElementById(FIELD_IDS[key]);
+    if (!el) return null;
+    const raw = el.value.trim();
+    if (raw === "") return null;
+    if (NUMBER_FIELDS.has(key)) {
+        const num = Number(raw);
+        return Number.isNaN(num) ? null : num;
+    }
+    return raw;
+}
 
-async function loadHistoryData() {
+function updateCompletionRing() {
+    const filled = COMPLETION_FIELDS.filter((key) => getFieldValue(key) !== null).length;
+    const total = COMPLETION_FIELDS.length;
+    const pct = Math.round((filled / total) * 100);
+
+    ringLabel.textContent = `${pct}%`;
+    progressBar.style.width = `${pct}%`;
+    const offset = RING_CIRCUMFERENCE - (RING_CIRCUMFERENCE * pct) / 100;
+    ringFill.style.strokeDashoffset = String(offset);
+
+    const missing = total - filled;
+    missingEl.textContent = missing === 0
+        ? "Your Patient History record is fully filled in."
+        : `${missing} field${missing === 1 ? "" : "s"} left to fill in.`;
+}
+
+function renderChecklist() {
+    checklistEl.innerHTML = availableConditions
+        .map((name) => {
+            const isSelected = selectedConditionNames.has(name);
+            return `<button type="button" class="chip${isSelected ? " is-selected" : ""}" data-condition="${name}">${name}</button>`;
+        })
+        .join("");
+
+    checklistEl.querySelectorAll(".chip").forEach((chip) => {
+        chip.addEventListener("click", () => {
+            const name = chip.dataset.condition;
+            if (selectedConditionNames.has(name)) {
+                selectedConditionNames.delete(name);
+                chip.classList.remove("is-selected");
+            } else {
+                selectedConditionNames.add(name);
+                chip.classList.add("is-selected");
+            }
+        });
+    });
+}
+
+async function loadAll() {
     try {
-        const [dashResp, condResp, chatResp] = await Promise.all([
-            fetch(`${API_BASE_URL}/dashboard`, { headers: { "Authorization": `Bearer ${token}` } }),
-            fetch(`${API_BASE_URL}/conditions`, { headers: { "Authorization": `Bearer ${token}` } }),
-            fetch(`${API_BASE_URL}/chat/history`, { headers: { "Authorization": `Bearer ${token}` } }),
+        const [profileResp, availableResp, conditionsResp] = await Promise.all([
+            authedFetch("/profile"),
+            authedFetch("/conditions/available"),
+            authedFetch("/conditions"),
         ]);
 
-        if (dashResp.status === 401 || condResp.status === 401) {
-            handleLogout();
-            return;
+        if (profileResp.ok) {
+            const profile = await profileResp.json();
+            Object.keys(FIELD_IDS).forEach((key) => setFieldValue(key, profile[key]));
         }
 
-        if (dashResp.ok) {
-            const dashData = await dashResp.json();
-            renderTimeline(dashData.health_timeline);
-            renderConsultSummaries(dashData.recent_conversations);
+        if (availableResp.ok) {
+            availableConditions = await availableResp.json();
         }
 
-        if (condResp.ok) {
-            const conds = await condResp.json();
-            renderConditions(conds);
+        if (conditionsResp.ok) {
+            currentConditions = await conditionsResp.json();
+            selectedConditionNames = new Set(currentConditions.map((c) => c.condition_name));
         }
 
+        renderChecklist();
+        updateCompletionRing();
     } catch (err) {
-        console.error("Error loading history:", err);
+        if (err.message === "Session expired") return;
+        console.error("Failed to load Patient History:", err);
+        toast("Couldn't load your Patient History. Please refresh.", "error");
     }
 }
 
-function renderTimeline(events) {
-    const list = document.getElementById("full-history-timeline");
+form.addEventListener("input", updateCompletionRing);
 
-    if (!events || events.length === 0) {
-        list.innerHTML = `<p style="color: var(--color-text-muted); font-size: 0.88rem;">No events recorded in your health log yet.</p>`;
-        return;
+form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    saveBtn.disabled = true;
+    saveBtn.textContent = "Saving…";
+    statusEl.textContent = "";
+
+    try {
+        const payload = {};
+        Object.keys(FIELD_IDS).forEach((key) => {
+            payload[key] = getFieldValue(key);
+        });
+
+        const saveResp = await authedFetch("/profile", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+        });
+
+        if (!saveResp.ok) {
+            throw new Error(`Server responded with ${saveResp.status}`);
+        }
+
+        // Diff the conditions checklist against what the server had.
+        const originalNames = new Set(currentConditions.map((c) => c.condition_name));
+        const toAdd = [...selectedConditionNames].filter((name) => !originalNames.has(name));
+        const toRemove = currentConditions.filter((c) => !selectedConditionNames.has(c.condition_name));
+
+        await Promise.all([
+            ...toAdd.map((condition_name) =>
+                authedFetch("/conditions", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ condition_name }),
+                })
+            ),
+            ...toRemove.map((c) => authedFetch(`/conditions/${c.id}`, { method: "DELETE" })),
+        ]);
+
+        // Refresh currentConditions to the new server state for the next save.
+        const conditionsResp = await authedFetch("/conditions");
+        if (conditionsResp.ok) {
+            currentConditions = await conditionsResp.json();
+            selectedConditionNames = new Set(currentConditions.map((c) => c.condition_name));
+        }
+
+        updateCompletionRing();
+        toast("Patient History saved.");
+        statusEl.textContent = "Saved just now.";
+
+        // The nav shows the patient's name — refresh it in case full_name changed.
+        document.dispatchEvent(new CustomEvent("sehatai:profile-updated"));
+    } catch (err) {
+        if (err.message === "Session expired") return;
+        console.error("Failed to save Patient History:", err);
+        toast("Couldn't save your Patient History. Please try again.", "error");
+    } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = "Save Record";
     }
+});
 
-    list.innerHTML = events.map(evt => {
-        const dateStr = new Date(evt.occurred_at).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
-        let icon = '📌';
-        if (evt.event_type === 'condition') icon = '🩺';
-        if (evt.event_type === 'medication') icon = '💊';
-
-        return `
-            <div class="timeline-item">
-                <div class="timeline-icon">${icon}</div>
-                <div class="timeline-content">
-                    <div class="timeline-header">
-                        <span class="timeline-title">${evt.title}</span>
-                        <span class="timeline-time">${dateStr}</span>
-                    </div>
-                    ${evt.detail ? `<div class="timeline-detail">${evt.detail}</div>` : ''}
-                </div>
-            </div>
-        `;
-    }).join("");
-}
-
-function renderConditions(conds) {
-    const box = document.getElementById("history-conditions-list");
-    if (!conds || conds.length === 0) {
-        box.innerHTML = `<span style="color: var(--color-text-muted); font-size: 0.85rem;">No conditions registered.</span>`;
-        return;
-    }
-
-    box.innerHTML = conds.map(c => `
-        <span class="badge badge-primary" style="padding: 6px 12px; font-size: 0.85rem;">
-            🩺 ${c.condition_name}
-        </span>
-    `).join("");
-}
-
-function renderConsultSummaries(chats) {
-    const list = document.getElementById("history-chats-list");
-    if (!chats || chats.length === 0) {
-        list.innerHTML = `<p style="color: var(--color-text-muted); font-size: 0.85rem;">No past consultations found.</p>`;
-        return;
-    }
-
-    list.innerHTML = chats.map(chat => {
-        const timeStr = new Date(chat.last_message_at).toLocaleDateString();
-        return `
-            <div style="background: var(--color-surface-raised); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 12px; cursor: pointer;" onclick="window.location.href='chat.html'">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <strong style="font-size: 0.86rem; color: var(--color-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px;">"${chat.first_message}"</strong>
-                    <span style="font-size: 0.74rem; color: var(--color-text-subtle);">${timeStr}</span>
-                </div>
-            </div>
-        `;
-    }).join("");
-}
-
-loadHistoryData();
+loadAll();
