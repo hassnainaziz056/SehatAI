@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SehatAI — Health History</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/app.css">
+</head>
+
+<body class="app-body">
+    <div class="app-shell">
+        <div id="app-nav"></div>
+
+        <main class="app-main">
+            <div class="page-heading">
+                <div>
+                    <h1>📋 Health History</h1>
+                    <p>Your patient record — kept up to date, this is what helps SehatAI give you safer answers.</p>
+                </div>
+            </div>
+
+            <!-- Completion -->
+            <section class="panel completion-card">
+                <div class="progress-ring-wrap">
+                    <svg width="84" height="84" viewBox="0 0 84 84">
+                        <circle class="progress-ring-track" cx="42" cy="42" r="36"></circle>
+                        <circle class="progress-ring-fill" id="completion-ring-fill" cx="42" cy="42" r="36"
+                            stroke-dasharray="226" stroke-dashoffset="226"></circle>
+                    </svg>
+                    <div class="progress-ring-label"><strong id="completion-ring-label">0%</strong><span>complete</span>
+                    </div>
+                </div>
+                <div class="completion-info">
+                    <h2>Profile Completion</h2>
+                    <div class="progress-track">
+                        <div class="progress-fill" id="completion-bar" style="width:0%"></div>
+                    </div>
+                    <div class="completion-missing" id="completion-missing"></div>
+                </div>
+            </section>
+
+            <form id="record-form">
+                <!-- Personal Information -->
+                <section class="panel record-section">
+                    <div class="record-section-header">
+                        <h2>👤 Personal Information</h2>
+                    </div>
+                    <div class="record-grid">
+                        <div class="field"><label for="rf-name">Full name</label><input type="text" id="rf-name"></div>
+                        <div class="field"><label for="rf-age">Age</label><input type="number" id="rf-age" min="0"
+                                max="120"></div>
+                        <div class="field">
+                            <label for="rf-gender">Gender</label>
+                            <select id="rf-gender">
+                                <option value="">Prefer not to say</option>
+                                <option>Male</option>
+                                <option>Female</option>
+                                <option>Other</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label for="rf-blood-group">Blood group</label>
+                            <select id="rf-blood-group">
+                                <option value="">Unknown</option>
+                                <option>A+</option>
+                                <option>A-</option>
+                                <option>B+</option>
+                                <option>B-</option>
+                                <option>AB+</option>
+                                <option>AB-</option>
+                                <option>O+</option>
+                                <option>O-</option>
+                            </select>
+                        </div>
+                        <div class="field"><label for="rf-height">Height (cm)</label><input type="number" id="rf-height"
+                                min="0" step="0.1"></div>
+                        <div class="field"><label for="rf-weight">Weight (kg)</label><input type="number" id="rf-weight"
+                                min="0" step="0.1"></div>
+                    </div>
+                </section>
+
+                <!-- Medical Conditions -->
+                <section class="panel record-section">
+                    <div class="record-section-header">
+                        <h2>🩺 Medical Conditions</h2>
+                    </div>
+                    <p style="margin: -6px 0 12px; font-size: 0.85rem; color: var(--color-text-muted);">Tap to select
+                        the conditions that apply to you.</p>
+                    <div class="chip-row" id="conditions-checklist"></div>
+                </section>
+
+                <!-- Allergies / Surgeries / Family History -->
+                <section class="panel record-section">
+                    <div class="record-section-header">
+                        <h2>⚠️ Allergies &amp; Surgical History</h2>
+                    </div>
+                    <div class="record-grid">
+                        <div class="field record-row--wide"><label for="rf-allergies">Allergies</label><textarea
+                                id="rf-allergies" rows="2" placeholder="e.g. Penicillin, peanuts"></textarea></div>
+                        <div class="field record-row--wide"><label for="rf-surgeries">Past surgeries</label><textarea
+                                id="rf-surgeries" rows="2"></textarea></div>
+                        <div class="field record-row--wide"><label for="rf-family-history">Family
+                                history</label><textarea id="rf-family-history" rows="2"
+                                placeholder="e.g. Diabetes (mother), Heart disease (father)"></textarea></div>
+                    </div>
+                </section>
+
+                <!-- Lifestyle -->
+                <section class="panel record-section">
+                    <div class="record-section-header">
+                        <h2>🌱 Lifestyle</h2>
+                    </div>
+                    <div class="record-grid">
+                        <div class="field">
+                            <label for="rf-smoking">Smoking status</label>
+                            <select id="rf-smoking">
+                                <option value="">Prefer not to say</option>
+                                <option value="Never smoked">Never smoked</option>
+                                <option value="Former smoker">Former smoker</option>
+                                <option value="Current smoker">Current smoker</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label for="rf-alcohol">Alcohol use</label>
+                            <select id="rf-alcohol">
+                                <option value="">Prefer not to say</option>
+                                <option value="Never">Never</option>
+                                <option value="Occasionally">Occasionally</option>
+                                <option value="Regularly">Regularly</option>
+                            </select>
+                        </div>
+                        <div class="field" id="pregnancy-field">
+                            <label for="rf-pregnancy">Pregnancy status</label>
+                            <select id="rf-pregnancy">
+                                <option value="">Not applicable</option>
+                                <option value="Pregnant">Pregnant</option>
+                                <option value="Not currently pregnant">Not currently pregnant</option>
+                            </select>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Emergency contact -->
+                <section class="panel record-section">
+                    <div class="record-section-header">
+                        <h2>🚨 Emergency Contact</h2>
+                    </div>
+                    <div class="record-grid">
+                        <div class="field"><label for="rf-emergency-name">Contact name</label><input type="text"
+                                id="rf-emergency-name"></div>
+                        <div class="field"><label for="rf-emergency-phone">Contact phone</label><input type="tel"
+                                id="rf-emergency-phone"></div>
+                    </div>
+                </section>
+
+                <div style="display:flex; justify-content:flex-end; gap:10px; margin-top: 8px;">
+                    <span id="record-status"
+                        style="align-self:center; font-size:0.85rem; color: var(--color-text-muted);"></span>
+                    <button type="submit" class="btn btn--primary" id="record-save-btn">Save Record</button>
+                </div>
+            </form>
+        </main>
+
+        <div id="app-bottomnav"></div>
+    </div>
+
+    <script src="js/common.js"></script>
+    <script src="js/nav.js"></script>
+    <script src="js/history.js"></script>
+</body>
+
+</html>

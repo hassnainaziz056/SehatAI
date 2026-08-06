@@ -4,41 +4,113 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SehatAI — Chat</title>
+    <title>SehatAI — AI Doctor Consultation</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600;700&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
 </head>
 
-<body class="chat-body">
+<body>
+    <div class="app-layout">
+        <!-- Main Content Area -->
+        <div class="main-wrapper" style="height: 100vh; display: flex; flex-direction: column;">
+            <!-- Header Top Bar -->
+            <header class="top-bar">
+                <div class="page-title-group" style="display: flex; align-items: center; gap: 12px;">
+                    <div class="avatar avatar-doctor" style="width: 36px; height: 36px; font-size: 15px;">S</div>
+                    <div>
+                        <h1 style="font-size: 1.15rem; margin: 0;">SehatAI Assistant</h1>
+                        <p style="margin: 0; font-size: 0.78rem; color: var(--color-vital);">● Clinical AI Active &
+                            Connected</p>
+                    </div>
+                </div>
 
-    <main class="chat-card" role="main">
-        <header class="chat-header">
-            <div class="wordmark">
-                <span class="pulse-dot" aria-hidden="true"></span>
-                <span class="wordmark-text">SehatAI</span>
+                <div class="top-bar-actions">
+                    <button class="btn btn-secondary btn-sm" onclick="window.location.href='dashboard.html'">Back to
+                        Dashboard</button>
+                    <button class="btn-icon" title="Logout" onclick="handleLogout()">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                        </svg>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Emergency Warning Banner (Hidden by default, shown when is_emergency is true) -->
+            <div id="emergency-banner" class="chat-banner-emergency" style="display: none;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <span>EMERGENCY DETECTED: If you are experiencing a life-threatening medical emergency, call 1122 or
+                        go to the nearest emergency room immediately!</span>
+                </div>
             </div>
-            <nav class="chat-header-actions">
-                <a href="profile.html" class="inline-link">Health profile</a>
-                <button type="button" id="logout-btn" class="logout-btn">Log out</button>
-            </nav>
-        </header>
 
-        <div id="chat-log" class="chat-log" aria-live="polite">
-            <p class="chat-loading">Loading your conversation…</p>
+            <!-- Messages Log -->
+            <div id="chat-messages" class="chat-messages">
+                <div id="chat-loading" style="text-align: center; color: var(--color-text-muted); margin: auto;">
+                    Loading conversation history…
+                </div>
+            </div>
+
+            <!-- Suggested Follow-up Questions -->
+            <div id="suggested-questions" class="suggested-questions">
+                <button class="chip-btn"
+                    onclick="sendQuickQuestion('What are common side effects of my medication?')">Side effects
+                    query</button>
+                <button class="chip-btn"
+                    onclick="sendQuickQuestion('What precautions should I take for high blood pressure?')">Blood
+                    pressure tips</button>
+                <button class="chip-btn"
+                    onclick="sendQuickQuestion('When should I schedule a follow-up visit with a doctor?')">Follow-up
+                    advice</button>
+            </div>
+
+            <!-- Chat Composer Bar -->
+            <div class="chat-composer">
+                <div class="composer-input-wrapper">
+                    <!-- Attachment button (Future-ready) -->
+                    <button class="btn-icon" style="width: 32px; height: 32px; border: none; background: transparent;"
+                        title="Attach file or image (Coming soon)"
+                        onclick="alert('Image/Lab report attachments will be enabled in the next update.')">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                        </svg>
+                    </button>
+
+                    <input type="text" id="message-input" class="composer-input"
+                        placeholder="Type your health query or symptoms here..." autocomplete="off">
+
+                    <!-- Voice Input button -->
+                    <button id="voice-btn" class="btn-icon"
+                        style="width: 32px; height: 32px; border: none; background: transparent;" title="Voice input">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                        </svg>
+                    </button>
+                </div>
+
+                <button id="send-btn" class="btn btn-primary" style="height: 44px; padding: 0 20px;">
+                    Send
+                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                    </svg>
+                </button>
+            </div>
         </div>
+    </div>
 
-        <form id="composer" class="composer" novalidate>
-            <label for="message-input" class="sr-only">Message</label>
-            <textarea id="message-input" class="message-input" placeholder="Tell SehatAI how you're feeling…" rows="1"
-                required></textarea>
-            <button type="submit" id="send-btn" class="send-btn" aria-label="Send message">Send</button>
-        </form>
-    </main>
-
+    <script src="js/common.js"></script>
+    <script src="js/nav.js"></script>
     <script src="js/chat.js"></script>
 </body>
 

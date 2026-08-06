@@ -1,153 +1,135 @@
 /**
- * frontend/js/profile.js — Phase 20: Expanded Patient Health Profile
- *
- * Auth guard identical to chat.js: no token -> straight to login.html.
- *
- * On load: GET /profile, pre-fill every field with whatever's already on
- * file (a first-time visitor gets an all-empty-but-freshly-created row —
- * see backend/routes/profile_routes.py's _get_or_create_profile).
- *
- * On save: PUT /profile with every field's current value. Unlike
- * register.js's "send null if nothing filled in" for a brand-new patient,
- * this always sends the full field set, INCLUDING blanks — a field a
- * patient clears here should actually clear on the server, not be
- * silently skipped.
- *
- * Same CORS note as the other frontend pages: serve this folder from a
- * local static server, don't open profile.html as a file:// URL.
+ * frontend/js/profile.js — Patient Health Profile Page
  */
-
-const API_BASE_URL = "http://127.0.0.1:8000";
-const SEHATAI_TOKEN_KEY = "sehatai_token"; // must match login.js/chat.js
+const API_BASE_URL = (window.location.port === "8000") ? window.location.origin : "http://127.0.0.1:8000";
+const SEHATAI_TOKEN_KEY = "sehatai_token";
 
 const token = localStorage.getItem(SEHATAI_TOKEN_KEY);
 if (!token) {
     window.location.href = "login.html";
 }
 
-const form = document.getElementById("profile-form");
-const statusBox = document.getElementById("form-status");
-const loadingNote = document.getElementById("loading-note");
-const fieldsWrapper = document.getElementById("profile-fields");
-const submitBtn = document.getElementById("submit-btn");
+renderPortalLayout();
 
-function showStatus(message, kind) {
-    statusBox.textContent = message;
+let isEditing = false;
+const toggleBtn = document.getElementById("toggle-edit-btn");
+const saveBar = document.getElementById("save-profile-bar");
+const saveBtn = document.getElementById("save-profile-btn");
+const profileForm = document.getElementById("profile-form");
+const statusBox = document.getElementById("profile-status");
+
+const fields = [
+    "prof-age", "prof-gender", "prof-height", "prof-weight", "prof-blood",
+    "prof-smoking", "prof-alcohol", "prof-emergency-name", "prof-emergency-phone",
+    "prof-allergies", "prof-surgeries", "prof-family", "prof-medical-history"
+];
+
+function showStatus(msg, isError = true) {
+    statusBox.textContent = msg;
     statusBox.hidden = false;
-    statusBox.className = `form-status form-status--${kind}`;
+    statusBox.className = `form-status ${isError ? "form-status--error" : "form-status--success"}`;
 }
 
 function hideStatus() {
     statusBox.hidden = true;
     statusBox.textContent = "";
-    statusBox.className = "form-status";
 }
 
-/** Same 401-aware fetch wrapper as chat.js. */
-async function authedFetch(path, options = {}) {
-    const response = await fetch(`${API_BASE_URL}${path}`, {
-        ...options,
-        headers: {
-            ...(options.headers || {}),
-            Authorization: `Bearer ${token}`,
-        },
+window.toggleProfileEdit = function(forceState = null) {
+    isEditing = forceState !== null ? forceState : !isEditing;
+    fields.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.disabled = !isEditing;
     });
 
-    if (response.status === 401) {
-        localStorage.removeItem(SEHATAI_TOKEN_KEY);
-        window.location.href = "login.html";
-        throw new Error("Session expired");
+    if (isEditing) {
+        toggleBtn.style.display = "none";
+        saveBar.style.display = "flex";
+    } else {
+        toggleBtn.style.display = "inline-block";
+        saveBar.style.display = "none";
+        loadProfileData();
     }
-
-    return response;
-}
-
-/** Field IDs shared between the DOM and the API's field names — every
- * one of these is both a getElementById target and a JSON key. */
-const FIELD_IDS = [
-    "age", "gender", "blood-group", "height", "weight", "pregnancy",
-    "smoking", "emergency-name", "emergency-phone",
-    "allergies", "medications", "surgeries", "history",
-];
-const API_FIELD_NAMES = {
-    age: "age", gender: "gender", "blood-group": "blood_group",
-    height: "height_cm", weight: "weight_kg", pregnancy: "pregnancy_status",
-    smoking: "smoking_status", "emergency-name": "emergency_contact_name",
-    "emergency-phone": "emergency_contact_phone", allergies: "allergies",
-    medications: "medications", surgeries: "surgeries", history: "medical_history",
 };
 
-function fillFormFromProfile(profile) {
-    for (const fieldId of FIELD_IDS) {
-        const el = document.getElementById(`profile-${fieldId}`);
-        const value = profile[API_FIELD_NAMES[fieldId]];
-        el.value = value === null || value === undefined ? "" : value;
-    }
-}
-
-function collectFormAsProfile() {
-    const payload = {};
-    for (const fieldId of FIELD_IDS) {
-        const el = document.getElementById(`profile-${fieldId}`);
-        const raw = el.value.trim();
-        const apiName = API_FIELD_NAMES[fieldId];
-        if (el.type === "number") {
-            payload[apiName] = raw === "" ? null : Number(raw);
-        } else {
-            payload[apiName] = raw === "" ? null : raw;
-        }
-    }
-    return payload;
-}
-
-async function loadProfile() {
+async function loadProfileData() {
     try {
-        const response = await authedFetch("/profile");
-        if (!response.ok) {
-            throw new Error(`Server responded with ${response.status}`);
+        const response = await fetch(`${API_BASE_URL}/profile`, {
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+
+        if (response.status === 401) {
+            handleLogout();
+            return;
         }
-        const profile = await response.json();
-        fillFormFromProfile(profile);
-        loadingNote.hidden = true;
-        fieldsWrapper.hidden = false;
+
+        if (response.ok) {
+            const data = await response.json();
+            document.getElementById("prof-age").value = data.age || "";
+            document.getElementById("prof-gender").value = data.gender || "";
+            document.getElementById("prof-height").value = data.height_cm || "";
+            document.getElementById("prof-weight").value = data.weight_kg || "";
+            document.getElementById("prof-blood").value = data.blood_group || "";
+            document.getElementById("prof-smoking").value = data.smoking_status || "Never smoked";
+            document.getElementById("prof-alcohol").value = data.alcohol_status || "Never";
+            document.getElementById("prof-emergency-name").value = data.emergency_contact_name || "";
+            document.getElementById("prof-emergency-phone").value = data.emergency_contact_phone || "";
+            document.getElementById("prof-allergies").value = data.allergies || "";
+            document.getElementById("prof-surgeries").value = data.surgeries || "";
+            document.getElementById("prof-family").value = data.family_history || "";
+            document.getElementById("prof-medical-history").value = data.medical_history || "";
+        }
     } catch (err) {
-        loadingNote.textContent =
-            "Couldn't load your profile right now. Please refresh to try again.";
-        console.error("Failed to load /profile:", err);
+        console.error("Profile load error:", err);
     }
 }
 
-form.addEventListener("submit", async (event) => {
-    event.preventDefault();
+profileForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
     hideStatus();
 
-    submitBtn.disabled = true;
-    submitBtn.textContent = "Saving…";
+    saveBtn.disabled = true;
+    saveBtn.textContent = "Saving…";
+
+    const payload = {
+        age: parseInt(document.getElementById("prof-age").value) || null,
+        gender: document.getElementById("prof-gender").value || null,
+        height_cm: parseFloat(document.getElementById("prof-height").value) || null,
+        weight_kg: parseFloat(document.getElementById("prof-weight").value) || null,
+        blood_group: document.getElementById("prof-blood").value || null,
+        smoking_status: document.getElementById("prof-smoking").value || null,
+        alcohol_status: document.getElementById("prof-alcohol").value || null,
+        emergency_contact_name: document.getElementById("prof-emergency-name").value.trim() || null,
+        emergency_contact_phone: document.getElementById("prof-emergency-phone").value.trim() || null,
+        allergies: document.getElementById("prof-allergies").value.trim() || null,
+        surgeries: document.getElementById("prof-surgeries").value.trim() || null,
+        family_history: document.getElementById("prof-family").value.trim() || null,
+        medical_history: document.getElementById("prof-medical-history").value.trim() || null,
+    };
 
     try {
-        const response = await authedFetch("/profile", {
+        const response = await fetch(`${API_BASE_URL}/profile`, {
             method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(collectFormAsProfile()),
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify(payload)
         });
 
         if (response.ok) {
-            showStatus("Profile saved.", "success");
-        } else if (response.status === 422) {
-            const errorBody = await response.json();
-            const firstMessage =
-                errorBody?.detail?.[0]?.msg || "Please check the form and try again.";
-            showStatus(firstMessage, "error");
+            showStatus("Profile updated successfully!", false);
+            toggleProfileEdit(false);
         } else {
-            showStatus("Something went wrong. Please try again.", "error");
+            showStatus("Failed to update profile. Please try again.");
         }
     } catch (err) {
-        showStatus("Couldn't reach the server. Is the API running?", "error");
-        console.error("Profile save failed:", err);
+        console.error("Update profile error:", err);
+        showStatus("Network error while updating profile.");
     } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = "Save profile";
+        saveBtn.disabled = false;
+        saveBtn.textContent = "Save Profile Changes";
     }
 });
 
-loadProfile();
+loadProfileData();

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SehatAI — Visit Summaries</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/app.css">
+</head>
+
+<body class="app-body">
+    <div class="app-shell">
+        <div id="app-nav"></div>
+
+        <main class="app-main">
+            <div class="page-heading">
+                <div>
+                    <h1>📄 Visit Summaries</h1>
+                    <p>One-page reports of your AI Doctor conversations — print or share one at your next real
+                        appointment.</p>
+                </div>
+                <button type="button" id="generate-btn" class="btn btn--primary">
+                    <span id="generate-btn-label">✨ Generate Summary</span>
+                </button>
+            </div>
+
+            <!-- Populated by visit-summaries.js: either the empty state, or
+                 one .summary-report-card per visit summary. -->
+            <section id="summaries-list">
+                <div class="panel">
+                    <div class="skeleton skeleton-block" style="margin-bottom:10px;"></div>
+                    <div class="skeleton skeleton-block"></div>
+                </div>
+            </section>
+        </main>
+
+        <div id="app-bottomnav"></div>
+    </div>
+
+    <!-- Summary detail modal -->
+    <div class="modal-overlay" id="summary-modal-overlay">
+        <div class="modal" id="summary-modal">
+            <div class="modal-header">
+                <h2 id="summary-modal-title">Visit Summary</h2>
+                <button type="button" class="modal-close" id="summary-modal-close" aria-label="Close">&times;</button>
+            </div>
+            <div id="summary-modal-body"></div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn--secondary" id="summary-modal-download">⬇ Download PDF</button>
+                <button type="button" class="btn btn--ghost" disabled title="Coming soon">🔗 Share</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/common.js"></script>
+    <script src="js/nav.js"></script>
+    <script src="js/visit-summaries.js"></script>
+</body>
+
+</html>

@@ -1,54 +1,46 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SehatAI — Log In</title>
+    <title>SehatAI — Patient Portal Login</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap"
-        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
 </head>
-
-<body>
-
-    <main class="card" role="main">
-        <header class="card-header">
-            <div class="wordmark">
-                <span class="pulse-dot" aria-hidden="true"></span>
-                <span class="wordmark-text">SehatAI</span>
+<body class="standalone-container">
+    <div class="card auth-card">
+        <header class="auth-header">
+            <div class="brand-logo">
+                <div class="brand-icon">S</div>
+                <span class="brand-title">SehatAI</span>
             </div>
-            <p class="tagline">Welcome back. Log in to pick up right where you left off.</p>
-
-            <svg class="ecg-divider" viewBox="0 0 400 24" preserveAspectRatio="none" aria-hidden="true">
-                <path d="M0,12 L120,12 L136,12 L144,2 L156,22 L168,12 L180,12 L400,12" fill="none" stroke="currentColor"
-                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
+            <h2>Welcome Back</h2>
+            <p>Log in to access your personal patient dashboard and records.</p>
         </header>
 
-        <form id="login-form" novalidate>
-            <div id="form-status" class="form-status" role="alert" aria-live="polite" hidden></div>
+        <form id="login-form">
+            <div id="form-status" class="form-status" role="alert" hidden></div>
 
-            <div class="field">
-                <label for="email">Email</label>
-                <input type="email" id="email" name="email" autocomplete="email" required>
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                <input type="email" id="email" class="form-control" placeholder="name@example.com" required autocomplete="email">
             </div>
 
-            <div class="field">
+            <div class="form-group">
                 <label for="password">Password</label>
-                <input type="password" id="password" name="password" autocomplete="current-password" required>
+                <input type="password" id="password" class="form-control" placeholder="Enter your password" required autocomplete="current-password">
             </div>
 
-            <button type="submit" id="submit-btn" class="submit-btn">Log in</button>
+            <button type="submit" id="submit-btn" class="btn btn-primary btn-lg" style="width: 100%; margin-top: 12px;">Log In</button>
         </form>
 
-        <p class="footer-note">New here? <a href="register.html" class="inline-link">Create an account</a></p>
-    </main>
+        <p class="footer-note" style="text-align: center; margin-top: 24px; color: var(--color-text-muted);">
+            New patient? <a href="register.html" class="inline-link">Create an account</a>
+        </p>
+    </div>
 
     <script src="js/login.js"></script>
 </body>
-
 </html>

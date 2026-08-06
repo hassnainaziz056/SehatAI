@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SehatAI — Account & Portal Settings</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <div class="app-layout">
+        <!-- Main Content Area -->
+        <div class="main-wrapper">
+            <!-- Header Top Bar -->
+            <header class="top-bar">
+                <div class="page-title-group">
+                    <h1>Portal Settings & Account Controls</h1>
+                    <p>Customize security, privacy preferences, theme, and notifications</p>
+                </div>
+
+                <div class="top-bar-actions">
+                    <button class="btn-icon" title="Logout" onclick="handleLogout()">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                        </svg>
+                    </button>
+                </div>
+            </header>
+
+            <main class="content-container" style="max-width: 800px;">
+                <div id="settings-status" class="form-status" hidden role="alert" style="margin-bottom: 20px;"></div>
+
+                <!-- Appearance & Theme Card -->
+                <div class="card" style="margin-bottom: 24px;">
+                    <h3 class="card-title" style="margin-bottom: 16px;">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                        </svg>
+                        Theme & Display
+                    </h3>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <strong style="font-size: 0.95rem;">Portal Theme Mode</strong>
+                            <p style="font-size: 0.84rem; color: var(--color-text-muted);">Switch between Slate Dark
+                                (default) and High-Contrast Light theme.</p>
+                        </div>
+                        <select id="theme-selector" class="form-control" style="width: 160px;"
+                            onchange="changeTheme(this.value)">
+                            <option value="dark">Dark Theme</option>
+                            <option value="light">Light Theme</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Notification Preferences Card -->
+                <div class="card" style="margin-bottom: 24px;">
+                    <h3 class="card-title" style="margin-bottom: 16px;">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                        </svg>
+                        Notifications & Nudges (Future-Ready)
+                    </h3>
+
+                    <div style="display: flex; flex-direction: column; gap: 14px;">
+                        <label
+                            style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;">
+                            <div>
+                                <strong style="font-size: 0.92rem;">Daily Medication Reminder Nudges</strong>
+                                <span style="font-size: 0.8rem; color: var(--color-text-muted); display: block;">Receive
+                                    browser ntfns at scheduled dose times</span>
+                            </div>
+                            <input type="checkbox" checked style="width: 18px; height: 18px;">
+                        </label>
+
+                        <label
+                            style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; border-top: 1px solid var(--color-border); padding-top: 12px;">
+                            <div>
+                                <strong style="font-size: 0.92rem;">Emergency & Safety Alerts</strong>
+                                <span
+                                    style="font-size: 0.8rem; color: var(--color-text-muted); display: block;">Immediate
+                                    alerts if high-risk symptoms are flagged</span>
+                            </div>
+                            <input type="checkbox" checked style="width: 18px; height: 18px;">
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Account Security Card -->
+                <div class="card" style="margin-bottom: 24px;">
+                    <h3 class="card-title" style="margin-bottom: 16px;">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                        Account Security & Password
+                    </h3>
+
+                    <form id="change-password-form">
+                        <div class="form-group">
+                            <label for="current-pass">Current Password</label>
+                            <input type="password" id="current-pass" class="form-control" placeholder="••••••••">
+                        </div>
+                        <div class="grid-2">
+                            <div class="form-group">
+                                <label for="new-pass">New Password</label>
+                                <input type="password" id="new-pass" class="form-control" minlength="8"
+                                    placeholder="At least 8 chars">
+                            </div>
+                            <div class="form-group">
+                                <label for="confirm-new-pass">Confirm New Password</label>
+                                <input type="password" id="confirm-new-pass" class="form-control" minlength="8"
+                                    placeholder="Re-type new pass">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-secondary btn-sm" style="margin-top: 8px;">Update
+                            Password</button>
+                    </form>
+                </div>
+
+                <!-- Danger Zone / Logout Card -->
+                <div class="card" style="border-color: var(--color-danger-light);">
+                    <h3 class="card-title" style="color: var(--color-danger); margin-bottom: 12px;">Session Controls
+                    </h3>
+                    <p style="font-size: 0.88rem; color: var(--color-text-muted); margin-bottom: 16px;">Log out of your
+                        current session on this device.</p>
+                    <button class="btn btn-danger" onclick="handleLogout()">Log Out of SehatAI</button>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="js/common.js"></script>
+    <script src="js/nav.js"></script>
+    <script src="js/settings.js"></script>
+</body>
+
+</html>

@@ -1,167 +1,51 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SehatAI — Register</title>
+    <title>SehatAI — Patient Portal Registration</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap"
-        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
 </head>
-
-<body>
-
-    <main class="card" role="main">
-        <header class="card-header">
-            <div class="wordmark">
-                <span class="pulse-dot" aria-hidden="true"></span>
-                <span class="wordmark-text">SehatAI</span>
+<body class="standalone-container">
+    <div class="card auth-card">
+        <header class="auth-header">
+            <div class="brand-logo">
+                <div class="brand-icon">S</div>
+                <span class="brand-title">SehatAI</span>
             </div>
-            <p class="tagline">A caring health companion for your household — available in your language, day or night.
-            </p>
-
-            <svg class="ecg-divider" viewBox="0 0 400 24" preserveAspectRatio="none" aria-hidden="true">
-                <path d="M0,12 L120,12 L136,12 L144,2 L156,22 L168,12 L180,12 L400,12" fill="none" stroke="currentColor"
-                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
+            <h2>Create Your Account</h2>
+            <p>Join the intelligent patient portal for personal healthcare management.</p>
         </header>
 
-        <form id="register-form" novalidate>
-            <div id="form-status" class="form-status" role="alert" aria-live="polite" hidden></div>
+        <form id="register-form">
+            <div id="form-status" class="form-status" role="alert" hidden></div>
 
-            <div class="field">
-                <label for="name">Full name</label>
-                <input type="text" id="name" name="name" autocomplete="name" required minlength="1">
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                <input type="email" id="email" class="form-control" placeholder="name@example.com" required autocomplete="email">
             </div>
 
-            <div class="field">
-                <label for="email">Email</label>
-                <input type="email" id="email" name="email" autocomplete="email" required>
-            </div>
-
-            <div class="field">
+            <div class="form-group">
                 <label for="password">Password</label>
-                <input type="password" id="password" name="password" autocomplete="new-password" required minlength="8">
-                <span class="field-hint">At least 8 characters.</span>
+                <input type="password" id="password" class="form-control" placeholder="At least 8 characters" required minlength="8" autocomplete="new-password">
             </div>
 
-            <fieldset class="conditions-fieldset">
-                <legend>Do any of these apply to you?</legend>
-                <p class="field-hint">Select all that apply — this helps SehatAI give you safer, more relevant answers.
-                    You can skip this if none apply.</p>
+            <div class="form-group">
+                <label for="confirm_password">Confirm Password</label>
+                <input type="password" id="confirm_password" class="form-control" placeholder="Re-enter your password" required minlength="8" autocomplete="new-password">
+            </div>
 
-                <div id="conditions-grid" class="conditions-grid" aria-live="polite">
-                    <p class="conditions-loading">Loading checklist…</p>
-                </div>
-
-                <div class="chart-tag chart-tag--other">
-                    <input type="checkbox" id="condition-other" class="condition-checkbox">
-                    <label for="condition-other">
-                        <span class="pulse-dot" aria-hidden="true"></span>
-                        Other
-                    </label>
-                    <input type="text" id="condition-other-text" class="other-input" placeholder="Please specify"
-                        disabled aria-label="Specify other condition">
-                </div>
-            </fieldset>
-
-            <fieldset class="profile-fieldset">
-                <legend>Health profile (optional)</legend>
-                <p class="field-hint">Helps SehatAI give you safer, more personal answers. Skip anything you'd
-                    rather not share now — you can always fill it in later from your profile page.</p>
-
-                <div class="profile-grid">
-                    <div class="field">
-                        <label for="profile-age">Age</label>
-                        <input type="number" id="profile-age" min="0" max="120">
-                    </div>
-                    <div class="field">
-                        <label for="profile-gender">Gender</label>
-                        <select id="profile-gender">
-                            <option value="">Prefer not to say</option>
-                            <option value="Male">Male</option>
-                            <option value="Female">Female</option>
-                            <option value="Other">Other</option>
-                        </select>
-                    </div>
-                    <div class="field">
-                        <label for="profile-blood-group">Blood group</label>
-                        <select id="profile-blood-group">
-                            <option value="">Unknown</option>
-                            <option>A+</option>
-                            <option>A-</option>
-                            <option>B+</option>
-                            <option>B-</option>
-                            <option>AB+</option>
-                            <option>AB-</option>
-                            <option>O+</option>
-                            <option>O-</option>
-                        </select>
-                    </div>
-                    <div class="field">
-                        <label for="profile-height">Height (cm)</label>
-                        <input type="number" id="profile-height" min="0" step="0.1">
-                    </div>
-                    <div class="field">
-                        <label for="profile-weight">Weight (kg)</label>
-                        <input type="number" id="profile-weight" min="0" step="0.1">
-                    </div>
-                    <div class="field">
-                        <label for="profile-pregnancy">Pregnancy status</label>
-                        <select id="profile-pregnancy">
-                            <option value="">Not applicable</option>
-                            <option value="Pregnant">Pregnant</option>
-                            <option value="Not currently pregnant">Not currently pregnant</option>
-                        </select>
-                    </div>
-                    <div class="field">
-                        <label for="profile-smoking">Smoking status</label>
-                        <select id="profile-smoking">
-                            <option value="">Prefer not to say</option>
-                            <option value="Never smoked">Never smoked</option>
-                            <option value="Former smoker">Former smoker</option>
-                            <option value="Current smoker">Current smoker</option>
-                        </select>
-                    </div>
-                    <div class="field">
-                        <label for="profile-emergency-name">Emergency contact name</label>
-                        <input type="text" id="profile-emergency-name">
-                    </div>
-                    <div class="field">
-                        <label for="profile-emergency-phone">Emergency contact phone</label>
-                        <input type="tel" id="profile-emergency-phone">
-                    </div>
-                </div>
-
-                <div class="field profile-field--wide">
-                    <label for="profile-allergies">Allergies</label>
-                    <textarea id="profile-allergies" rows="2" placeholder="e.g. Penicillin, peanuts"></textarea>
-                </div>
-                <div class="field profile-field--wide">
-                    <label for="profile-medications">Current medications</label>
-                    <textarea id="profile-medications" rows="2"></textarea>
-                </div>
-                <div class="field profile-field--wide">
-                    <label for="profile-surgeries">Past surgeries</label>
-                    <textarea id="profile-surgeries" rows="2"></textarea>
-                </div>
-                <div class="field profile-field--wide">
-                    <label for="profile-history">Other medical history</label>
-                    <textarea id="profile-history" rows="2"></textarea>
-                </div>
-            </fieldset>
-
-            <button type="submit" id="submit-btn" class="submit-btn">Create account</button>
+            <button type="submit" id="submit-btn" class="btn btn-primary btn-lg" style="width: 100%; margin-top: 12px;">Create Account</button>
         </form>
 
-        <p class="footer-note">Already registered? <a href="login.html" class="inline-link">Log in</a></p>
-    </main>
+        <p class="footer-note" style="text-align: center; margin-top: 24px; color: var(--color-text-muted);">
+            Already have an account? <a href="login.html" class="inline-link">Log in here</a>
+        </p>
+    </div>
 
     <script src="js/register.js"></script>
 </body>
-
 </html>
